@@ -1,10 +1,6 @@
 var webpack = require('webpack');
 var fs = require('fs');
 var path = require('path');
-const MiniCssExtractPlugin = require("mini-css-extract-plugin");
-const OptimizeCssAssetsPlugin = require('optimize-css-assets-webpack-plugin');
-const CopyWebpackPlugin = require('copy-webpack-plugin')
-const MergeJsonWebpackPlugin = require("merge-jsons-webpack-plugin");
 
 function NullPlugin() {
     this.apply = function(){};
@@ -60,14 +56,6 @@ module.exports = function(env) {
         };
 
         if (extractCss) {
-            // Generates a CSS file that needs to be included by the developer.
-            moduleConfig.rules.push({
-                test: /\.css$/,
-                use: [ 
-                    { loader: MiniCssExtractPlugin.loader },
-                    { loader: "css-loader" },
-                ]
-            });
         } else {
             // CSS styles will be included into the HTML by inserting <style> tags
             moduleConfig.rules.push({
@@ -82,70 +70,8 @@ module.exports = function(env) {
         return moduleConfig;
     }
 
-    function getBannerPlugin() {
-        return;
-    }
-    
-    function getDefinePlugin(wantGui, buildType) {  
-        
-        let workerFile = PROD_BUILD ? 'lmvworker.min.js' : 'lmvworker.js';
-        
-        var patterns = {
-            BUILD_FLAG__WANT_GUI: wantGui,
-            BUILD_FLAG__BUILD_VERSION: JSON.stringify(build_version),
-            BUILD_FLAG__BUILD_TYPE: JSON.stringify(buildType),
-            BUILD_FLAG__LMV_WORKER_FILE: JSON.stringify(workerFile),
-        };
 
-        // Extensions...
-        // Generates code chunk like this:
-        //   ``` 
-        //      register( EXTENSION_ID, EXTENSION_BUILD_OUTPUT_PATH.js );
-        //   ```
-        // See externalExtensions.js for more info.
-        var extensions = getExternalExtensions();
-        var replacement = '';
-        extensions.forEach((ee)=>{
-            
-            // Add extension
-            let key = getExtensionEntryKey(ee);
-            let ext = PROD_BUILD ? 'min.js' : 'js';
-            let file = `extensions/${key}/${key}.${ext}`;
-            
-            ee.ids.forEach((id)=>{
 
-                let code = `register('${id}', '${file}');\n`;
-                replacement += code;
-
-            });
-        });
-        patterns.BUILD_FLAG__REGISTER_EXTERNAL_EXTENSIONS = replacement;
-
-        return new webpack.DefinePlugin(patterns);
-    }
-
-    function getAllStringsJsonPlugin() {
-        var folderLocales = [
-            'en', 'cs', 'de', 'es', 'fr', 
-            'it', 'ja', 'ko', 'pl', 'pt-BR', 
-            'ru', 'tr', 'zh-HANS', 'zh-HANT', 
-            'nl', 'sv', 'da'
-        ];
-        var patterns = folderLocales.map((locStr)=>{
-            return {
-                "pattern": "./res/locales/" + locStr + "/*.json ",
-                "fileName": "./res/locales/" + locStr + "/allstrings.json" 
-            }
-        });
-        return new MergeJsonWebpackPlugin({
-            "output": { 
-                "groupBy": patterns
-            },
-            "globOptions": {
-                "nosort": true
-            }
-        });
-    }
 
 
     var outputPath =  path.resolve(__dirname, "./build");
@@ -158,14 +84,14 @@ module.exports = function(env) {
                 src: './Measure/Measure',
                 ids: ['Autodesk.Measure'],
             },
-/*            {
-                src: './Markup/Markup.js',
+            {
+                src: './Markup/Markup',
                 ids: [
                     'Autodesk.Viewing.MarkupsCore', 
                     'Autodesk.Viewing.MarkupsGui'
                 ],
             },
-*/
+
         ];
     }
 

@@ -1,9 +1,11 @@
 ## Building Measure/Markup extensions
 
-public 'mirror' version of forge viewer markup and measure extensions 
+This is a public 'mirror' version of forge viewer markup and measure extensions 
 
+**Motivation:**
+Forge customers want to modify existing markup and measure tools.
 
-### Setup
+## Setup
 
 1. install cmd line...
 
@@ -11,30 +13,24 @@ public 'mirror' version of forge viewer markup and measure extensions
 npm install webpack
 npm install css-loader --save-dev
 npm install style-loader --save-dev
-
 npm install svg-url-loader --save-dev
-npm install mini-css-extract-plugin --save-dev
-npm install optimize-css-assets-webpack-plugin --save-dev
-npm install copy-webpack-plugin --save-dev
-npm install merge-jsons-webpack-plugin --save-dev
 ```
 
 
 ## Compile
 `webpack --config=webpack.js --env.BUILD_TASK=lmv-extensions --env.BUILD_PROD=true`
 
-this will create minified extensions:
+this will create minified files under `build/extensions/`:
 
 ```
-build/measure/measure.min.js
-build/markup/markup.min.js
-
+Measure/Measure.min.js
+Markup/Markup.min.js
 ```
 
 ## Run
 which you can include in your index.html file, like this:
 
 ```
-<script src="measure.min.js"></script>
-<script src="markup.min.js"></script>
+<script src="Measure.min.js"></script>
+<script src="Markup.min.js"></script>
 ```

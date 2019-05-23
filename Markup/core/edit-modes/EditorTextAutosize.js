@@ -1,0 +1,277 @@
+
+'use strict';
+
+/*!
+    Based on Autosize 4.0.0
+    license: MIT
+    http://www.jacklmoore.com/autosize
+*/
+var map = typeof Map === "function" ? new Map() : (function () {
+    var keys = [];
+    var values = [];
+
+    return {
+        has: function has(key) {
+            return keys.indexOf(key) > -1;
+        },
+        get: function get(key) {
+            return values[keys.indexOf(key)];
+        },
+        set: function set(key, value) {
+            if (keys.indexOf(key) === -1) {
+                keys.push(key);
+                values.push(value);
+            }
+        },
+        'delete': function _delete(key) {
+            var index = keys.indexOf(key);
+            if (index > -1) {
+                keys.splice(index, 1);
+                values.splice(index, 1);
+            }
+        }
+    };
+})();
+
+var createEvent = function createEvent(name) {
+    return new Event(name, { bubbles: true });
+};
+try {
+    new Event('test');
+} catch (e) {
+    // IE does not support `new Event()`
+    createEvent = function (name) {
+        var evt = document.createEvent('Event');
+        evt.initEvent(name, true, false);
+        return evt;
+    };
+}
+
+function assign(ta) {
+    if (!ta || !ta.nodeName || ta.nodeName !== 'TEXTAREA' || map.has(ta)) return;
+
+    var heightOffset = null;
+    var clientWidth = ta.clientWidth;
+    var cachedHeight = null;
+
+    function init() {
+        var style = window.getComputedStyle(ta, null);
+
+        if (style.resize === 'vertical') {
+            ta.style.resize = 'none';
+        } else if (style.resize === 'both') {
+            ta.style.resize = 'horizontal';
+        }
+
+        if (style.boxSizing === 'content-box') {
+            heightOffset = -(parseFloat(style.paddingTop) + parseFloat(style.paddingBottom));
+        } else {
+            heightOffset = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+        }
+        // Fix when a textarea is not on document body and heightOffset is Not a Number
+        if (isNaN(heightOffset)) {
+            heightOffset = 0;
+        }
+
+        update();
+    }
+
+    function changeOverflow(value) {
+        {
+            // Chrome/Safari-specific fix:
+            // When the textarea y-overflow is hidden, Chrome/Safari do not reflow the text to account for the space
+            // made available by removing the scrollbar. The following forces the necessary text reflow.
+            var width = ta.style.width;
+            ta.style.width = '0px';
+            // Force reflow:
+            /* jshint ignore:start */
+            ta.offsetWidth;
+            /* jshint ignore:end */
+            ta.style.width = width;
+        }
+
+        ta.style.overflow = value;
+    }
+
+    function getParentOverflows(el) {
+        var arr = [];
+
+        while (el && el.parentNode && el.parentNode instanceof Element) {
+            if (el.parentNode.scrollTop) {
+                arr.push({
+                    node: el.parentNode,
+                    scrollTop: el.parentNode.scrollTop
+                });
+            }
+            el = el.parentNode;
+        }
+
+        return arr;
+    }
+
+    function resize() {
+        var originalHeight = ta.style.height;
+        var overflows = getParentOverflows(ta);
+        var docTop = document.documentElement && document.documentElement.scrollTop; // Needed for Mobile IE (ticket #240)
+
+        ta.style.height = '';
+
+        var endHeight = ta.scrollHeight + heightOffset;
+
+        if (ta.scrollHeight === 0) {
+            // If the scrollHeight is 0, then the element probably has display:none or is detached from the DOM.
+            ta.style.height = originalHeight;
+            return;
+        }
+
+        ta.style.height = endHeight + 'px';
+
+        // used to check if an update is actually necessary on window.resize
+        clientWidth = ta.clientWidth;
+
+        // prevents scroll-position jumping
+        overflows.forEach(function (el) {
+            // This condition is necessary for iOS 11, where you can't assign value to body.scrollTop
+            if (el.node.scrollTop !== el.scrollTop) {
+                el.node.scrollTop = el.scrollTop;
+            }
+        });
+
+        if (docTop) {
+            document.documentElement.scrollTop = docTop;
+        }
+    }
+
+    function update() {
+        resize();
+
+        var styleHeight = Math.round(parseFloat(ta.style.height));
+        var computed = window.getComputedStyle(ta, null);
+
+        // Using offsetHeight as a replacement for computed.height in IE, because IE does not account use of border-box
+        var actualHeight = computed.boxSizing === 'content-box' ? Math.round(parseFloat(computed.height)) : ta.offsetHeight;
+
+        // The actual height not matching the style height (set via the resize method) indicates that
+        // the max-height has been exceeded, in which case the overflow should be allowed.
+        if (actualHeight !== styleHeight) {
+            if (computed.overflow === 'hidden') {
+                changeOverflow('scroll');
+                resize();
+                actualHeight = computed.boxSizing === 'content-box' ? Math.round(parseFloat(window.getComputedStyle(ta, null).height)) : ta.offsetHeight;
+            }
+        } else {
+            // Normally keep overflow set to hidden, to avoid flash of scrollbar as the textarea expands.
+            if (computed.overflow !== 'hidden') {
+                changeOverflow('hidden');
+                resize();
+                actualHeight = computed.boxSizing === 'content-box' ? Math.round(parseFloat(window.getComputedStyle(ta, null).height)) : ta.offsetHeight;
+            }
+        }
+
+        if (cachedHeight !== actualHeight) {
+            cachedHeight = actualHeight;
+            var evt = createEvent('autosize:resized');
+            try {
+                ta.dispatchEvent(evt);
+            } catch (err) {
+                // Firefox will throw an error on dispatchEvent for a detached element
+                // https://bugzilla.mozilla.org/show_bug.cgi?id=889376
+            }
+        }
+    }
+
+    var pageResize = function pageResize() {
+        if (ta.clientWidth !== clientWidth) {
+            update();
+        }
+    };
+
+    var destroy = (function (style) {
+        window.removeEventListener('resize', pageResize, false);
+        ta.removeEventListener('input', update, false);
+        ta.removeEventListener('keyup', update, false);
+        ta.removeEventListener('autosize:destroy', destroy, false);
+        ta.removeEventListener('autosize:update', update, false);
+
+        Object.keys(style).forEach(function (key) {
+            ta.style[key] = style[key];
+        });
+
+        map['delete'](ta);
+    }).bind(ta, {
+        height: ta.style.height,
+        resize: ta.style.resize,
+        overflow: ta.style.overflow,
+        overflowX: ta.style.overflowX,
+        wordWrap: ta.style.wordWrap
+    });
+
+    ta.addEventListener('autosize:destroy', destroy, false);
+
+    // IE9 does not fire onpropertychange or oninput for deletions,
+    // so binding to onkeyup to catch most of those events.
+    // There is no way that I know of to detect something like 'cut' in IE9.
+    if ('onpropertychange' in ta && 'oninput' in ta) {
+        ta.addEventListener('keyup', update, false);
+    }
+
+    window.addEventListener('resize', pageResize, false);
+    ta.addEventListener('input', update, false);
+    ta.addEventListener('autosize:update', update, false);
+    ta.style.overflowX = 'hidden';
+    ta.style.wordWrap = 'break-word';
+
+    map.set(ta, {
+        destroy: destroy,
+        update: update
+    });
+
+    init();
+}
+
+function destroy(ta) {
+    var methods = map.get(ta);
+    if (methods) {
+        methods.destroy();
+    }
+}
+
+function update(ta) {
+    var methods = map.get(ta);
+    if (methods) {
+        methods.update();
+    }
+}
+
+function isRuntimeSupported() {
+    // Don't support Node.js and IE8 (or lower)
+    if (typeof window === 'undefined' || typeof window.getComputedStyle !== 'function')
+        return false;
+    return true;
+}
+
+const RUNTIME_SUPPORTED = isRuntimeSupported();
+
+
+export var autosize = function(el, options) {
+    if (RUNTIME_SUPPORTED && el) {
+        Array.prototype.forEach.call(el.length ? el : [el], function (x) {
+            return assign(x, options);
+        });
+    } 
+    return el;
+};
+
+autosize.destroy = function(el) {
+    if (RUNTIME_SUPPORTED && el) {
+        Array.prototype.forEach.call(el.length ? el : [el], destroy);
+    }
+    return el;
+}
+
+autosize.update = function(el) {
+    if (RUNTIME_SUPPORTED && el) {
+        Array.prototype.forEach.call(el.length ? el : [el], update);
+    }
+    return el;
+}

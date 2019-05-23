@@ -1,0 +1,101 @@
+.adsk-viewing-viewer .autodesk-markups-extension-core-make-me-bigger:after {
+	content: ""; 
+	position: absolute; 
+	top: -15px; 
+	bottom: -15px; 
+	left: -15px; 
+	right: -15px;
+}
+
+.adsk-viewing-viewer .autodesk-markups-extension-core-make-me-bigger.rotation-bridge:after {
+	top: 0; 
+	bottom: 0px; 
+}
+
+.adsk-viewing-viewer .selector-box {
+	position: absolute;
+    border: 1px dashed #0696D7;
+    background: rgba(6, 150, 215, 0.05);
+    z-index: 1;
+    cursor: move;
+    box-sizing: border-box;
+}
+
+.adsk-viewing-viewer .selector-drag-point,
+.adsk-viewing-viewer .selector-rotate-point {
+	position: absolute;
+	height: 8px;
+	width: 8px;
+	border-radius: 8px;					/*HANDLE_SIZE*/
+    background: #FFFFFF;				/*HANDLE_BACKGROUND_COLOR*/
+    border-color: rgba(107,120,127,0.7); /* HANDLE_BORDER_COLOR; */
+    border-width: 1px; 					/* BORDER_WIDTH */
+    border-style: solid;
+}
+
+.adsk-viewing-viewer .selector-rotate-point {
+	top: calc(100% + 22px); /* 30 - 8 = 22 */
+	left: calc(50% + 1px);
+	transform: translate3d(-50%, 0px, 0px);
+}
+
+.adsk-viewing-viewer .selector-drag-point.selected,
+.adsk-viewing-viewer .selector-rotate-point.selected:not(.rotation-bridge) {
+	background: #0696D7;
+	border-color: #0696D7;
+}
+
+.adsk-viewing-viewer .rotation-bridge {
+	position: absolute;
+	background-color: rgba(0,0,0,0);
+	height: 30px;
+	width: 0px;
+	top: 100%;
+	left: calc(50% + 1px);
+	border: unset;
+    border-left: 1px dashed #0696D7;
+}
+/*var placementOffset = -6;*/
+.adsk-viewing-viewer .selector-drag-point.sdp-handle-n {
+	top: -6px;
+	left: calc(50% - 4px);
+	position: relative;
+}
+
+.adsk-viewing-viewer .selector-drag-point.sdp-handle-s {
+	top: calc(100% - 14px);
+    left: calc(50% - 4px);
+    position: relative;
+}
+
+.adsk-viewing-viewer .selector-drag-point.sdp-handle-w {
+	left: -6px;
+	top: 50%;
+	transform: translate3d(0, -50%, 0);
+}
+
+.adsk-viewing-viewer .selector-drag-point.sdp-handle-e {
+	right: -6px;
+	top: 50%;
+    transform: translate3d(0, -50%, 0);
+}
+
+.adsk-viewing-viewer .selector-drag-point.sdp-handle-nw {
+	top: -6px;
+	left: -6px;
+}
+
+.adsk-viewing-viewer .selector-drag-point.sdp-handle-ne {
+	top: -6px;
+	right: -6px;
+}
+
+.adsk-viewing-viewer .selector-drag-point.sdp-handle-sw {
+	bottom: -6px;
+	left: -6px;
+}
+
+.adsk-viewing-viewer .selector-drag-point.sdp-handle-se {
+	bottom: -6px;
+	right: -6px;
+}

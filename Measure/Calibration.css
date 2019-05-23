@@ -1,0 +1,188 @@
+@font-face {
+    font-family: 'calibration-icon';
+    src: url('data:application/octet-stream;base64,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') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+[class^="calibration-icon"], [class*=" calibration-icon"] {
+    font-family: 'calibration-icon';
+    font-style: normal;
+    font-weight: normal;
+    font-variant: normal;
+    line-height: 1;
+    padding-top: 2px;
+    speak: none;
+    text-transform: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.adsk-viewing-viewer .calibration-icon:before {
+    content: 'a';
+}
+
+.adsk-viewing-viewer .calibration-panel {
+    left:calc(50% - 190px);
+    top: calc(50% - 145px);
+    width: 300px;
+    height: auto;
+    z-index: 4;
+}
+
+.adsk-viewing-viewer .measure-settings-popup .option-drop-down,
+.adsk-viewing-viewer .calibration-panel .option-drop-down {
+    width: 100%;
+    padding-right: 0px;
+    box-sizing: border-box;
+}
+
+.adsk-viewing-viewer .measure-settings-popup .adsk-lmv-tftable tr td,
+.adsk-viewing-viewer .calibration-panel .adsk-lmv-tftable tr td {
+    width: auto;
+    padding: 2px 15px 2px 0px;
+}
+
+.adsk-viewing-viewer .calibration-panel .adsk-lmv-tftable tr td input {
+    margin: 0px;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.adsk-viewing-viewer .measure-settings-popup .switch {
+    margin-left: 25px;
+}
+.adsk-viewing-viewer .measure-settings-popup .switch .slider {
+    width: 26px;
+}
+
+.adsk-viewing-viewer .calibration-textbox::-webkit-inner-spin-button, 
+.adsk-viewing-viewer .calibration-textbox::-webkit-outer-spin-button { 
+    -webkit-appearance: none; 
+    margin: 0; 
+}
+
+.adsk-viewing-viewer .calibration-text {
+    text-align: left;
+    padding: 6px 10px 6px 10px;
+    margin: 20px 20px 14px 20px;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+}
+
+.adsk-viewing-viewer .calibration-button {
+    margin-top: 15px;
+}
+
+.adsk-viewing-viewer .calibration-button-left {
+    width: calc(50% - 15px);
+    margin-right: 5px !important;
+    display: inline-block;
+}
+
+.adsk-viewing-viewer .calibration-button-right {
+    width: calc(50% - 15px);
+    margin-left: 5px !important;
+    display: inline-block;
+}
+
+.adsk-viewing-viewer .calibration-line {
+    position: absolute;
+    display: block;    
+    top:0;
+    left:0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.adsk-viewing-viewer .calibration-label {
+    display: none;
+    position: absolute;
+    pointer-events: none;
+    text-align: 'center';
+    vertical-align: middle;
+    cursor: default;
+    padding: 2px;
+    color: #000000;
+    background: #FFFFFF;
+    border-radius: 10px;
+    -webkit-transform-origin: 50%  53%;
+}
+
+.adsk-viewing-viewer .calibration-label-text {
+    display: inline-block;
+    pointer-events: none;
+    text-align: 'center';
+    vertical-align: middle;
+    font-size: 12px;
+    cursor: default;
+    padding: 2px;
+    color: #000000;
+    background: #FFFFFF;
+    border-bottom: 1px dashed #000000;
+    text-decoration: none;
+    text-transform: uppercase;
+    -webkit-font-smoothing: antialiased;
+}
+
+.adsk-viewing-viewer .calibration-label-text:hover {
+    color: #039be5;
+    border-bottom: 1px dashed #039be5;
+}
+
+.adsk-viewing-viewer .calibration-label.visible {
+    display: block;
+}
+
+.adsk-viewing-viewer .calibration-endpoint:hover.calibration-endpoint.enable-hover,
+.adsk-viewing-viewer .calibration-endpoint.edit {
+    background-color: #039be5;
+}
+
+.adsk-viewing-viewer .calibration-endpoint:hover.calibration-endpoint.enable-hover > * ,
+.adsk-viewing-viewer .calibration-endpoint.edit > * {
+    color: #ffffff;
+}
+
+.adsk-viewing-viewer .calibration-endpoint.editable {
+    pointer-events: all;
+}
+
+.adsk-viewing-viewer .calibration-endpoint {
+    display: none;
+    position: absolute;
+    cursor: move;
+    pointer-events: none;
+    width: 30px;
+    height: 30px;
+    background-color: #ffffff;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.24), 0 0 8px 0 rgba(0, 0, 0, 0.12);
+    -moz-border-radius: 50px;
+    -webkit-border-radius: 50px;
+    border-radius: 50px;
+    justify-content:center;
+    align-items:center;
+    text-align: center;
+}
+
+.adsk-viewing-viewer .calibration-endpoint.visible {
+    display: block;
+}
+
+.adsk-viewing-viewer .calibration-endpoint-text {
+    display: inline-block;
+    font-size: 14px;
+    vertical-align: middle;
+    cursor: default;
+    margin: 5px 5px 5px 5px;
+    vertical-align: middle;
+    text-align: center;
+    color: #039be5;
+    text-decoration: none;
+    text-transform: uppercase;
+    pointer-events: none;
+}
+
+.adsk-viewing-viewer .calibration-buttons-wrapper {
+    text-align: center;
+}

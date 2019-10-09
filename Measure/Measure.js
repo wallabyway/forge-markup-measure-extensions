@@ -39,17 +39,12 @@ export var MeasureExtension = function(viewer, options) {
     Autodesk.Viewing.Extension.call(this, viewer, options);
     this.modes = ['distance','angle','area','calibrate'];
     this.name = 'measure';
+    this._onModelLoaded = this._onModelLoaded.bind(this);
 };
 
 MeasureExtension.prototype = Object.create(Autodesk.Viewing.Extension.prototype);
 MeasureExtension.prototype.constructor = MeasureExtension;
 
-
-MeasureExtension.prototype.onToolbarCreated = function() {
-    this.viewer.removeEventListener(av.TOOLBAR_CREATED_EVENT, this.bindedOnToolbarCreated);
-    this.bindedOnToolbarCreated = null;
-    this.createUI();
-};
 
 /**
  * Load the measure extension.
@@ -61,7 +56,7 @@ MeasureExtension.prototype.load = function() {
 
     var self   = this;
     var viewer = this.viewer;
-    this.hasUI = Autodesk.Viewing.Private.GuiViewer3D && viewer instanceof Autodesk.Viewing.Private.GuiViewer3D;
+    this.hasUI = Autodesk.Viewing.GuiViewer3D && viewer instanceof Autodesk.Viewing.GuiViewer3D;
 
     this.escapeHotkeyId = 'Autodesk.Measure.Hotkeys.Escape';
 
@@ -123,33 +118,47 @@ MeasureExtension.prototype.load = function() {
     viewer.addEventListener(MeasureCommon.Events.MEASUREMENT_CHANGED_EVENT, this.onMeasurementChanged);
 
     if (viewer.model) {
-        onModelLoaded(this, viewer.model);
+        this._onModelLoaded({ model: viewer.model });
     } else {
-        viewer.addEventListener(av.MODEL_ROOT_LOADED_EVENT, function(event){
-            if(self.unloaded) return false;	
-            onModelLoaded(self, event.model);	
-        }, { once: true });
+        viewer.addEventListener(av.MODEL_ROOT_LOADED_EVENT, this._onModelLoaded, { once: true });
     }
 
+    // If there is no model anymore, interrupt any ongoing interaction.
+    // We need at least one model to derive things like is2d() and model units.
+    this.onModelRemoved = function() {
+        // If UI was not created yet or destroyed, we don't have to disable anything
+        if (!self.measurementToolbarButton) {
+            return;
+        }
+                
+        if (!self.viewer.model) {
+            self.measurementToolbarButton.setState(Autodesk.Viewing.UI.Button.State.DISABLED);
+            self.exitMeasurementMode();
+        }
+    };
+    this.onModelAdded = function() {
+
+        // If UI was not created yet or destroyed, the button will be enabled in next createUI() call
+        if (!self.measurementToolbarButton) {
+            return;
+        }
+
+        // On first model-add, re-enable measure toolbar again
+        var modelCount = self.viewer.getVisibleModels().length;
+        if (modelCount === 1 && self.measurementToolbarButton) {
+            self.measurementToolbarButton.setState(Autodesk.Viewing.UI.Button.State.INACTIVE);
+        }
+    };
+    viewer.addEventListener(av.MODEL_ADDED_EVENT, this.onModelAdded);
+    viewer.addEventListener(av.MODEL_REMOVED_EVENT, this.onModelRemoved);
     return true;
 };
 
-function onModelLoaded(measureExt, model) {
-    populateSharedMeasureConfig(measureExt, model);
-
-    if (measureExt.viewer.toolbar) {
-        measureExt.createUI();
-    } else {
-        measureExt.bindedOnToolbarCreated = measureExt.onToolbarCreated.bind(measureExt);
-        measureExt.viewer.addEventListener(av.TOOLBAR_CREATED_EVENT, measureExt.bindedOnToolbarCreated);
-    }
-}
-
-
-function populateSharedMeasureConfig(measureExt, model) {
-    measureExt.sharedMeasureConfig.units = model.getDisplayUnit();
-    measureExt.sharedMeasureConfig.precision = model.is2d() ? 3 : 1;
-    measureExt.sharedMeasureConfig.calibrationFactor = measureExt.options.calibrationFactor;
+MeasureExtension.prototype._onModelLoaded = function(event) {
+    var model = event.model;
+    this.sharedMeasureConfig.units = model.getDisplayUnit();
+    this.sharedMeasureConfig.precision = model.is2d() ? 3 : 1;
+    this.sharedMeasureConfig.calibrationFactor = this.options.calibrationFactor;
 }
 
 /**
@@ -163,13 +172,12 @@ MeasureExtension.prototype.unload = function () {
 
     // Remove the ui from the viewer.
     this.destroyUI();
-    if (this.bindedOnToolbarCreated) {
-        this.viewer.removeEventListener(av.TOOLBAR_CREATED_EVENT, this.bindedOnToolbarCreated);
-        this.bindedOnToolbarCreated = null;
-    }
 
     viewer.removeEventListener('finished-calibration', this.onFinishedCalibration);
     viewer.removeEventListener(MeasureCommon.Events.MEASUREMENT_CHANGED_EVENT, this.onMeasurementChanged);
+    viewer.removeEventListener(av.MODEL_ADDED_EVENT, this.onModelAdded);
+    viewer.removeEventListener(av.MODEL_REMOVED_EVENT, this.onModelRemoved);
+    viewer.removeEventListener(av.MODEL_ROOT_LOADED_EVENT, this._onModelLoaded);
 
     viewer.toolController.deregisterTool(this.snapper);
     this.snapper = null;
@@ -243,7 +251,8 @@ MeasureExtension.prototype.getUnitOptions = function() {
         { name: 'Meters', type: 'm' },
         { name: 'Centimeters', type: 'cm' },
         { name: 'Millimeters', type: 'mm' },
-        { name: 'Meters and centimeters', type: 'm-and-cm' }
+        { name: 'Meters and centimeters', type: 'm-and-cm' },
+        { name: 'Points', type: 'pt' }
     ];
 
     return units;
@@ -314,7 +323,7 @@ MeasureExtension.prototype.openCalibrationRequiredDialog = function (initiator) 
   */
 MeasureExtension.prototype.activate = function (mode) {
     if (this.activeStatus && this.mode === mode) {
-        return;
+        return true;
     }
     this.enterMeasurementMode();
 
@@ -322,6 +331,7 @@ MeasureExtension.prototype.activate = function (mode) {
 
     switch (mode) {
         default:
+            mode = 'distance';
         case 'distance':
             success = this.enableMeasureTool(true, MeasureCommon.MeasurementTypes.MEASUREMENT_DISTANCE);
             break;
@@ -382,9 +392,12 @@ MeasureExtension.prototype.enableMeasureTool = function(enable, measurementType)
             if (this.measureToolbar) {
                 this.measureToolbar.deactivateAllButtons();
             }
-        }
 
-        this.selectedTool = NONE;
+            // No tool is active anymore. Only do this if measureTool was really the active one before.
+            // If not, changing selectedTool would produce an inconsistent state, e.g., CalibrationTool 
+            // may still be active, but enableCalibrationTool(false) would not properly close it.
+            this.selectedTool = NONE;
+        }
 
         return true;
     }
@@ -501,7 +514,7 @@ MeasureExtension.prototype.enterMeasurementMode = function() {
         return; // Adds support for Viewer3D instance
     }
 
-    var toolbar = this.viewer.getToolbar(false);    
+    var toolbar = this.viewer.getToolbar();    
     var viewerToolbarContainer = toolbar.container;
     var viewerContainerChildrenCount = viewerToolbarContainer.children.length;
     for(var i = 0; i < viewerContainerChildrenCount; ++i) {
@@ -516,10 +529,9 @@ MeasureExtension.prototype.enterMeasurementMode = function() {
     this.measureControls.setVisible(true);
     this.measureControls.container.style.display = '';
     
-    var modelTools = toolbar.getControl(av.TOOLBAR.MODELTOOLSID);
     var measureButtonId = this.measurementToolbarButton.getId();
-    this.measurementToolbarButton.index = modelTools.indexOf(measureButtonId);
-    modelTools.removeControl(measureButtonId);
+    this.measurementToolbarButton.index = this.measurementToolbarButton.parent.indexOf(measureButtonId);
+    this.measurementToolbarButton.parent.removeControl(measureButtonId);
 
     this.measureToolbar.toggleVisible();
 
@@ -546,12 +558,14 @@ MeasureExtension.prototype.exitMeasurementMode = function() {
  * Create measure button in toolbar.
  * @private
 */
-MeasureExtension.prototype.createUI = function()
+MeasureExtension.prototype.onToolbarCreated = function(toolbar)
 {
+    if (this.measureToolbar) {
+        return;
+    }
+
     var self   = this;
     var viewer = this.viewer;
-
-    var toolbar = viewer.getToolbar(true);
 
     // Add Measure button to toolbar
     var modelTools = toolbar.getControl(av.TOOLBAR.MODELTOOLSID);
@@ -560,6 +574,10 @@ MeasureExtension.prototype.createUI = function()
     this.measurementToolbarButton.setIcon("adsk-icon-measure");
     modelTools.measurementToolbarButton = this.measurementToolbarButton;
     modelTools.addControl(this.measurementToolbarButton, {index:0});
+
+    // Set button enabled if and only if there is >=1 visible model. Otherwise, it will remain disabled until next model-add event.
+    var state = this.viewer.model ? Autodesk.Viewing.UI.Button.State.INACTIVE : Autodesk.Viewing.UI.Button.State.DISABLED;
+    this.measurementToolbarButton.setState(state);
     
     this.measureToolbar = new MeasureToolbar(this);
     this.measureToolbar.init();
@@ -580,9 +598,6 @@ MeasureExtension.prototype.createUI = function()
         }
     }];
     viewer.getHotkeyManager().pushHotkeys(this.escapeHotkeyId, hotkeys);
-
-    // Finally
-    this.uiCreated = true;
 };
 
 
@@ -591,7 +606,12 @@ MeasureExtension.prototype.createUI = function()
  */
 MeasureExtension.prototype.checkAndFetchTopology = function(tool) {
 
-    if (!this.uiCreated || !this.viewer.model.is3d()) {
+    if (this._checkedTopology) {
+        return;
+    }
+
+    this._checkedTopology = true;
+    if (!this.viewer.model.is3d()) {
         tool && tool.setNoTopology();
         return;
     }
@@ -621,23 +641,9 @@ MeasureExtension.prototype.destroyUI = function()
 {
     var viewer = this.viewer;    
 
-    var toolbar = viewer && viewer.getToolbar && viewer.getToolbar(false);
-    if (toolbar) {
-        var modelTools = toolbar.getControl(av.TOOLBAR.MODELTOOLSID);
-        if (modelTools) {
-            var submenu = null;
-            
-            if (this.measurementToolbarButton) {
-                submenu = modelTools.getControl("toolbar-inspectSubMenu");
-                if (submenu) {
-                    submenu.removeControl(this.measurementToolbarButton.getId());
-                } else {
-                    modelTools.removeControl(this.measurementToolbarButton.getId());
-                }
-            }
-
-            this.measurementToolbarButton = null;
-        }
+    if (this.measurementToolbarButton) {
+        this.measurementToolbarButton.removeFromParent();
+        this.measurementToolbarButton = null;
     }
 
     viewer.getHotkeyManager().popHotkeys(this.escapeHotkeyId);

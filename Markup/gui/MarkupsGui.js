@@ -11,6 +11,10 @@ import CSS from './MarkupsGui.css' // IMPORTANT!!
         Autodesk.Viewing.Extension.call(this, viewer, options);
         this.domEvents = [];
         this.name = 'markup';
+        this.onEditModeEnter = this.onEditModeEnter.bind(this);
+        this.onEditModeLeave = this.onEditModeLeave.bind(this);
+        this.onEditModeChange = this.onEditModeChange.bind(this);
+        this.onMarkupSelected = this.onMarkupSelected.bind(this);
     }
 
     MarkupsGui.prototype = Object.create(Autodesk.Viewing.Extension.prototype);
@@ -21,78 +25,41 @@ import CSS from './MarkupsGui.css' // IMPORTANT!!
 
     proto.load = function () {
 
-        var onCoreLoaded = function() {
+        this.viewer.loadExtension(CORE_EXTENSION).then( coreExt => {
 
-            this.core = this.viewer.getExtension(CORE_EXTENSION);
-
-            if (this.viewer.toolbar) {
-                this.createToolbarUI();
-            } else {
-                this.bindedOnToolbarCreated = this.onToolbarCreated.bind(this);
-                this.viewer.addEventListener(av.TOOLBAR_CREATED_EVENT, this.bindedOnToolbarCreated);
-            }
+            this.core = coreExt;
 
             // Hook into markup core events
-            this.onEditModeEnterBinded = this.onEditModeEnter.bind(this);
-            this.onEditModeLeaveBinded = this.onEditModeLeave.bind(this);
-            this.onEditModeChangeBinded = this.onEditModeChange.bind(this);
-            this.onMarkupSelectedBinded = this.onMarkupSelected.bind(this);
-            this.core.addEventListener(MarkupEvents.EVENT_EDITMODE_ENTER, this.onEditModeEnterBinded);
-            this.core.addEventListener(MarkupEvents.EVENT_EDITMODE_LEAVE, this.onEditModeLeaveBinded);
-            this.core.addEventListener(MarkupEvents.EVENT_EDITMODE_CHANGED, this.onEditModeChangeBinded);
-            this.core.addEventListener(MarkupEvents.EVENT_MARKUP_SELECTED, this.onMarkupSelectedBinded);
-        }.bind(this);
-
-        var onCoreError = function() {
-            avp.logger.warn('Error getting dependency:', CORE_EXTENSION);
-        }.bind(this);
-
-        var core = this.viewer.getExtension(CORE_EXTENSION);
-        if (core) {
-            onCoreLoaded();
-        } else {
-            avp.logger.warn('Getting missing dependency:', CORE_EXTENSION);
-            this.viewer.loadExtension(CORE_EXTENSION).then(onCoreLoaded, onCoreError);
-        }
+            this.core.addEventListener(MarkupEvents.EVENT_EDITMODE_ENTER, this.onEditModeEnter);
+            this.core.addEventListener(MarkupEvents.EVENT_EDITMODE_LEAVE, this.onEditModeLeave);
+            this.core.addEventListener(MarkupEvents.EVENT_EDITMODE_CHANGED, this.onEditModeChange);
+            this.core.addEventListener(MarkupEvents.EVENT_MARKUP_SELECTED, this.onMarkupSelected);
+        });
 
         return true;
     };
 
     proto.unload = function() {
 
+        this.deactivate(); // not necessary, but leaves the viewer in an unusable state without it
         this.unhookAllEvents();
 
-        this.core.removeEventListener(MarkupEvents.EVENT_EDITMODE_ENTER, this.onEditModeEnterBinded);
-        this.core.removeEventListener(MarkupEvents.EVENT_EDITMODE_LEAVE, this.onEditModeLeaveBinded);
-        this.core.removeEventListener(MarkupEvents.EVENT_EDITMODE_CHANGED, this.onEditModeChangeBinded);
-        this.core.removeEventListener(MarkupEvents.EVENT_MARKUP_SELECTED, this.onMarkupSelectedBinded);
-        this.onEditModeEnterBinded = null;
-        this.onEditModeLeaveBinded = null;
-        this.onEditModeChangeBinded = null;
-        this.onMarkupSelectedBinded = null;
+        this.core.removeEventListener(MarkupEvents.EVENT_EDITMODE_ENTER, this.onEditModeEnter);
+        this.core.removeEventListener(MarkupEvents.EVENT_EDITMODE_LEAVE, this.onEditModeLeave);
+        this.core.removeEventListener(MarkupEvents.EVENT_EDITMODE_CHANGED, this.onEditModeChange);
+        this.core.removeEventListener(MarkupEvents.EVENT_MARKUP_SELECTED, this.onMarkupSelected);
 
+        this.destroyToolUi();
         this.destroyToolbarUI();
-        if (this.bindedOnToolbarCreated) {
-            this.viewer.removeEventListener(av.TOOLBAR_CREATED_EVENT, this.bindedOnToolbarCreated);
-            this.bindedOnToolbarCreated = null;
-        }
-
         this.core = null;
 
         return true;
     };
 
-    proto.onToolbarCreated = function() {
-        this.viewer.removeEventListener(av.TOOLBAR_CREATED_EVENT, this.bindedOnToolbarCreated);
-        this.bindedOnToolbarCreated = null;
-        this.createToolbarUI();
-    };
-
-    proto.createToolbarUI = function() {
-
+    proto.onToolbarCreated = function(toolbar) {
+        
         var self = this;
         var viewer = this.viewer;
-        var toolbar = viewer.getToolbar(true);
 
         this.markupToolButton = new Autodesk.Viewing.UI.Button("toolbar-markupTool");
         this.markupToolButton.setToolTip("Markup");
@@ -111,12 +78,9 @@ import CSS from './MarkupsGui.css' // IMPORTANT!!
 
     proto.destroyToolbarUI = function() {
         if (this.markupToolButton) {
-            var toolbar = this.viewer.getToolbar(false);
+            var toolbar = this.viewer.getToolbar();
             if (toolbar) {
-                var modelTools = toolbar.getControl(av.TOOLBAR.MODELTOOLSID);
-                if (modelTools) {
-                    modelTools.removeControl(this.markupToolButton);
-                }
+                this.markupToolButton.removeFromParent();
             }
             this.markupToolButton = null;
         }
@@ -253,6 +217,13 @@ import CSS from './MarkupsGui.css' // IMPORTANT!!
         this.hookEvent('change', '.lmv-markup-gui-style-select', this.onStyleChange.bind(this));
 
         this.setStylesUi(this.core.editMode);
+    };
+
+    proto.destroyToolUi = function() {
+        if (this.domRoot) {
+            this.hideToolsUi();
+            this.domRoot = null;
+        }
     };
 
     proto.getEditMode = function(editModeType) {

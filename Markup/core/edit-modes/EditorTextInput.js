@@ -1,6 +1,6 @@
 'use strict';
 
-const ResizeObserver = require('../../../thirdparty/resize-observer-polyfill/ResizeObserver.min.js'); // Required for Markup Text Input
+const ResizeObserver = require('../../../../thirdparty/resize-observer-polyfill/ResizeObserver.min.js'); // Required for Markup Text Input
 import { autosize } from './EditorTextAutosize'
 import { addTraitEventDispatcher } from '../MarkupsCoreUtils'
 import { cloneStyle } from '../StyleUtils'
@@ -427,7 +427,7 @@ import { DomElementStyle } from '../DomElementStyle'
         var done = false;
 
         while (!done){
-            this.measureDiv.innerHTML = text;
+            this.measureDiv.innerText = text;
             var lineLen = this.measureDiv.clientWidth - (2 * parseFloat(this.measureDiv.style.padding));
             if (lineLen <= maxLength) {
                 output.push(text);
@@ -496,7 +496,7 @@ import { DomElementStyle } from '../DomElementStyle'
         while (fits) {
 
             var part = word.substr(0,lenSoFar);
-            this.measureDiv.innerHTML = part;
+            this.measureDiv.innerText = part;
             var lineLen =  this.measureDiv.clientWidth - (2 * parseFloat(this.measureDiv.style.padding));
 
             if (lineLen > maxLength) {

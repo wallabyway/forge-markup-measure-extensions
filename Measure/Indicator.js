@@ -265,6 +265,15 @@
         // For each label, check if it's inside the camera viewport.
         if (this.viewer.model && !this.viewer.model.is2d()) {
             this.visibleLabels.forEach(function(label) {
+
+                // Ignore labels if position is not computed yet. This may temporarily happen, because label positions are not
+                // always immediately assigned. (see MeasureToolIndicator.js)
+                // Note that we must not set them to invisible here, because this may cause a hen-and-egg-problem: 
+                // Some code sections in MeasureToolIndicator.updatePositions() don't set the label position for invisible labels.
+                if (!label.point) {
+                    return;
+                }
+
                 var show = this.viewer.navigation.isPointVisible(label.point);
 
                 if ((label.classList.contains('visible') && !show) || (!label.classList.contains('visible') && show)) {

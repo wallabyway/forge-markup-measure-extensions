@@ -51,7 +51,7 @@ export var CalibrationTool = function( viewer, options, sharedMeasureConfig, sna
     // GUI.
     var _calibrationPanel = null;
     var _cursor = "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAYCAYAAAD+vg1LAAAAAXNSR0IArs4c6QAAAwZJREFUSA2tVEtLW0EUvjGJefoqSY0x0WBSiY+oNWiUINkU6ioLaaAlG1eudNVFoT+grgopiCkEIbUK1o0lusmurRSEWmmKG6MNtNhNosWqyU2CZPpN8cr15nFD7YHDzHnON2fOGYZhmHkw4XEW+wD4xkT4lMvl6CE0+Y2ohh+dz+cZn89HVS/5+n/d/wVMkXq9Xor2v5SBgsmymQwZHx+vOqlKpXKDXWI3eU6Tg+kqSjSh3W4/s9lsvzUajaNcAK3xY7Dyci3nd6WXSCS60dHRvMfjSRcKBfWV4SYbrVarB8p0PB5nY7HYmdVq/aDX67WlckpKKcvpOjs7X09OTvoPDw8z2Wy2Bu+imJqa+npycnJXGHOt3YRGoSyVSvvMZrNkYWFBs7GxkaoBAXFJcDJhcCW5rq5ur62trQ/EOhyOBhDT2Nj4qVKMqA31ve1yub7Rfufo/PycDA4OxpuamhqECaouhVqtfuD3+1tqa2uZQCCQDoVCWTwknVQDDvIKE1clI1ja09Ozg0cjx8fHpL+/P+50OhMU8f7+Punt7f2I5NdqXRXi9fV1z9jYWCuIWV5eziSTyWAqlXq1urqaw6AwOMiCG4lOYtEturu732xubhK0FQHSvfr6+lsog4HWPIPvIBqNErRiqCiwkkKpVFowZd8xZSQYDLImk+kJ52+xWJ4tLS3hU8yTkZGRBD2Ms4mu6Nun4XA4f3p6SoaGhuJ0+rgg/Bsmt9udYFmWzM3NZdDT05ztWsE5JV0R1AqUCfTt0fb2tjESiRRmZmaOUOcI3w9DY5mdnb03PDzMoDQ/MZFRzM20lO/E38vl8vt46UdAq0WNJWixlEwmu8B1bXioOxwjpgXJ0hMTE1og1qysrDghf+HnKtoD7c7u7i5ZXFzMGY3GF7iFuRR3dHTMr62tXWxtbZH29vZ3RYmECozu54ODAzpdP2hphHZOVigUVjChvgMDA+85fdm1q6vrrU6n+4WR9Zd1ujQ0Nzc/NBgMScSExXwZ2j5oL5Wo46UD/ZvxUemo+AdW1zJzUYr16wAAAABJRU5ErkJggg==), auto";
-    var _hasUI = Autodesk.Viewing.Private.GuiViewer3D && viewer instanceof Autodesk.Viewing.Private.GuiViewer3D;
+    var _hasUI = Autodesk.Viewing.GuiViewer3D && viewer instanceof Autodesk.Viewing.GuiViewer3D;
 
     var MeasureCommon = Autodesk.Viewing.MeasureCommon;
 

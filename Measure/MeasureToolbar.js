@@ -20,7 +20,7 @@
         var self = this;
 
         // Add Measure tool toolbar to main toolbar
-        var toolbar = this.viewer.getToolbar(true);
+        var toolbar = this.viewer.getToolbar();
         var navigationBar = toolbar.getControl(Autodesk.Viewing.TOOLBAR.NAVTOOLSID);
         var toolbarOptions = {};
         toolbarOptions.index = toolbar.indexOf(navigationBar) + 1;
@@ -156,7 +156,8 @@
             { name: 'Meters', units: 'm', matches: ['m'] },                                     // localized in OptionDropDown() call below
             { name: 'Centimeters', units: 'cm', matches: ['cm'] },                              // localized in OptionDropDown() call below
             { name: 'Millimeters', units: 'mm', matches: ['mm'] },                              // localized in OptionDropDown() call below
-            { name: 'Meters and centimeters', units: 'm-and-cm', matches: ['m-and-cm'] }        // localized in OptionDropDown() call below
+            { name: 'Meters and centimeters', units: 'm-and-cm', matches: ['m-and-cm'] },        // localized in OptionDropDown() call below
+            { name: 'Points', units: 'pt', matches: ['pt'] }                                    // localized in OptionDropDown() call below
         ];
 
         var initialIndex = this.findUnits(),
@@ -240,13 +241,20 @@
 
     };
 
+    proto.destroy = function() {
+        if (this.measureToolbar) {
+            this.measureToolbar.removeFromParent();
+            this.measureToolbar = null;
+        }
+    };
+
     proto.closeToolbar = function() {
 
         this.measureExtension.enableMeasureTool(false);
         this.measureExtension.enableCalibrationTool(false);
         this.toggleVisible();
 
-        var toolbar = this.viewer.getToolbar(false);
+        var toolbar = this.viewer.getToolbar();
         var viewerToolbarContainer = toolbar.container;
         var viewerContainerChildrenCount = viewerToolbarContainer.children.length;
         

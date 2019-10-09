@@ -753,7 +753,7 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         } 
         else { 
             // In order to draw rubber-band, set the cursor position, so the indicator will use it as active point.
-            if (event && _viewer.model.is2d()) {
+            if (event && _viewer.model && _viewer.model.is2d()) {
                 var viewport = _viewer.container.getBoundingClientRect();
                 var x = event.canvasX || event.clientX - viewport.left;
                 var y = event.canvasY || event.clientY - viewport.top;

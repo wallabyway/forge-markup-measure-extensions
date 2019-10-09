@@ -8,6 +8,15 @@
         avu = Autodesk.Viewing.UI,
         MeasureCommon = Autodesk.Viewing.MeasureCommon;
 
+    // This strange code is there because we 
+    // don't want DockingPanel, which is used as a base class later
+    // to be undefined during headless mode.
+    // Simply deriving from undefined will cause an exception (from babel env preset) 
+    // even if the class is never instantiated
+    const DockingPanel = (avu && avu.DockingPanel) || class {};
+    // et ViewerPanelMixin to a no-op in headless mode
+    const ViewerPanelMixin = (ave && ave.ViewerPanelMixin) || function () {};
+
     //
     // /** @constructor */
     //
@@ -19,7 +28,7 @@
         options = options || {};
         options.addFooter = false;
 
-        avu.DockingPanel.call(this, viewer.container, id, title, options);
+        DockingPanel.call(this, viewer.container, id, title, options);
 
         this.viewer = viewer;
         this.calibrationTool = calibrationTool;
@@ -97,7 +106,7 @@
             var isSimple = self.units[self.unitList.selectedIndex].simpleInput;
         
             if (!isPositiveNumber(requestedSize) || (isSimple && (!isSimpleDecimal(requestedSize) || Autodesk.Viewing.Private.calculatePrecision(requestedSize) > self.calibrationTool.getMaxPrecision()))) {
-                 e.preventDefault();
+                    e.preventDefault();
             }
         });
 
@@ -159,13 +168,13 @@
         return !isNaN(parseFloat(n)) && !isNaN(+n) && parseFloat(n) >= 0;
     };
 
-    CalibrationPanel.prototype = Object.create(avu.DockingPanel.prototype);
-    ave.ViewerPanelMixin.call(CalibrationPanel.prototype);
+    CalibrationPanel.prototype = Object.create(DockingPanel.prototype);
+    ViewerPanelMixin.call(CalibrationPanel.prototype);
 
 
     CalibrationPanel.prototype.uninitialize = function uninitialize() {
         this.viewer = null;
-        avu.DockingPanel.prototype.uninitialize.call(this);
+        DockingPanel.prototype.uninitialize.call(this);
     };
 
     CalibrationPanel.prototype.findUnits = function findUnits() {
@@ -258,7 +267,7 @@
         options = options || {};
         options.addFooter = false;
 
-        avu.DockingPanel.call(this, viewer.container, id, title, options);
+        DockingPanel.call(this, viewer.container, id, title, options);
 
         this.viewer = viewer;
         this.measureExt = measureExt;
@@ -315,11 +324,11 @@
 
     }; // end constructor
 
-    CalibrationRequiredDialog.prototype = Object.create(avu.DockingPanel.prototype);
-    ave.ViewerPanelMixin.call(CalibrationRequiredDialog.prototype);
+    CalibrationRequiredDialog.prototype = Object.create(DockingPanel.prototype);
+    ViewerPanelMixin.call(CalibrationRequiredDialog.prototype);
 
 
     CalibrationRequiredDialog.prototype.uninitialize = function uninitialize() {
         this.viewer = null;
-        avu.DockingPanel.prototype.uninitialize.call(this);
+        DockingPanel.prototype.uninitialize.call(this);
     };

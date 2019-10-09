@@ -7,6 +7,7 @@ import { isTouchDevice } from '../MarkupsCoreUtils'
 
     var _mouseEnabled = false;
     var _mousePrevValue = false;
+    var _lock = false;
 
     export function InputHandler() {
 
@@ -69,12 +70,14 @@ import { isTouchDevice } from '../MarkupsCoreUtils'
 
     proto.setMouseDisabledWhenTouching = function(event) {
 
-        if (event.isFirst) {
+        if (event.isFirst && !_lock) {
             this.enableMouseButtons(false);
+            _lock = true;
         } else if (event.isFinal) {
             var _this = this;
             setTimeout(function() {
                 _this.enableMouseButtons(_mousePrevValue);
+                _lock = false;
             }, 10);
         }
     };
@@ -127,7 +130,7 @@ import { isTouchDevice } from '../MarkupsCoreUtils'
 
         if (this.hammer) {
             this.hammer.on('dragstart dragmove dragend', this.onTouchDragBinded);
-			this.hammer.on('panstart panmove panend', this.onTouchPanBinded);
+            this.hammer.on('panstart panmove panend', this.onTouchPanBinded);
             this.hammer.on('pinchstart pinchmove pinchend', this.onTouchPinchBinded);
             this.hammer.on('singletap', this.onSingleTapBinded);
             this.hammer.on('singletap2', this.onSingleTapBinded);

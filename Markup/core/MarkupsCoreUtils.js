@@ -1,4 +1,4 @@
-const canvg = require('../../thirdparty/canvg/canvg.js'); // Required for Markup Thumbnails
+const canvg = require('../../../thirdparty/canvg/canvg.js'); // Required for Markup Thumbnails
 import * as MarkupType from '../core/MarkupTypes'
 import { CreateArrow } from './edit-actions/CreateArrow'
 import { CreateRectangle } from './edit-actions/CreateRectangle'
@@ -318,29 +318,6 @@ import { DomElementStyle } from './DomElementStyle'
         return THREE.Math.generateUUID();
     };
 
-    /**
-     * To ensure all clip paths have unique ids, we search all clip paths belonging to markups and return a grater id.
-     * TODO: This method will not be used for fixing clip path ids. Instead use getUniqueID. This method should be
-     * deprecated.
-     * @returns {number}
-     */
-    export var getClipPathId = function() {
-
-        var clippers = document.getElementsByTagName('clipPath');
-        var clippersCount = clippers.length;
-        var maxId = 0;
-
-        for (var i = 0; i < clippersCount; ++i) {
-
-            var clipperId = clippers[i].id;
-            if (clipperId.indexOf('markup-clipper-') === -1 ) {
-                continue;
-            }
-            clipperId = clipperId.replace('markup-clipper-', '');
-            maxId = Math.max(maxId, clipperId);
-        }
-        return maxId+1;
-    };
 
     /**
      * Serializes an SVG node into a String.
@@ -660,17 +637,14 @@ import { DomElementStyle } from './DomElementStyle'
 
         // Restore view cube.
         if(viewer && viewer.model && !viewer.model.is2d()) {
-            viewer.displayViewCube(true, false);
+            viewer.getExtension("Autodesk.ViewCubeUi", function(ext) {
+                ext.displayViewCube(true, false);
+                ext.displayHomeButton(true);
+            }); 
         }
 
         // TODO: Find or ask for a better way to restore this buttons.
-        // Hide home button.
-        var home = document.getElementsByClassName('homeViewWrapper');
         var anim = document.getElementsByClassName('toolbar-animation-subtoolbar');
-
-        if (home.length > 0) {
-            home[0].style.display = '';
-        }
 
         if (anim.length > 0) {
             anim[0].style.display = '';
@@ -694,17 +668,15 @@ import { DomElementStyle } from './DomElementStyle'
 
         // Hide Panels and tools.
         if (viewer && viewer.model && !viewer.model.is2d()) {
-            viewer.displayViewCube(false, false);
+            viewer.getExtension("Autodesk.ViewCubeUi", function(ext) {
+                ext.displayViewCube(false, false);
+                ext.displayHomeButton(false);
+            });
+            
         }
 
         // TODO: Find or ask for a better way to hide this buttons.
-        // Hide home button.
-        var home = document.getElementsByClassName('homeViewWrapper');
         var anim = document.getElementsByClassName('toolbar-animation-subtoolbar');
-
-        if (home.length > 0) {
-            home[0].style.display = 'none';
-        }
 
         if (anim.length > 0) {
             anim[0].style.display = 'none';
@@ -1305,7 +1277,7 @@ import { DomElementStyle } from './DomElementStyle'
         var linesCount = lines.length;
         for(var i = 0; i < linesCount; ++i) {
 
-            measure.innerHTML = lines[i];
+            measure.innerText = lines[i];
             result.push({
                 line: lines[i],
                 width: measure.clientWidth,

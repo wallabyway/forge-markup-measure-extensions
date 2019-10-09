@@ -29,6 +29,13 @@ import { EditModeDimension } from './edit-modes/EditModeDimension'
         this.type = MarkupTypes.MARKUP_TYPE_DIMENSION;
         this.constraintHeight = true;
         this.constraintWidth = true;
+
+        // bind to this to pass this.globalManager
+        this.addMarkupMetadata = addMarkupMetadata.bind(this);
+        this.createSvgElement = createSvgElement.bind(this);
+        this.checkLineSegment = checkLineSegment.bind(this);
+        this.measureTextLines = measureTextLines.bind(this);
+
         
         this.firstAnchor = new THREE.Vector3();
         this.secondAnchor = new THREE.Vector3();
@@ -180,7 +187,7 @@ import { EditModeDimension } from './edit-modes/EditModeDimension'
         var strokeWidth = style['stroke-width'];
         var backgroundColor = (value === ' ') ? 'none' : BACKGROUND_COLOR;
 
-        var markup = createSvgElement('text');
+        var markup = this.createSvgElement('text');
         markup.setAttribute('id', 'markup');
         markup.setAttribute('alignment-baseline', 'middle');
 
@@ -191,11 +198,11 @@ import { EditModeDimension } from './edit-modes/EditModeDimension'
         text.childNodes[0].appendChild(markup);
         text.markup = markup;
 
-        var tspan = createSvgElement('tspan');
+        var tspan = this.createSvgElement('tspan');
         tspan.textContent = value;
         markup.appendChild(tspan);
 
-        var lineSize = measureTextLines([value], style, editor)[0]; // Only one line for measurement
+        var lineSize = this.measureTextLines([value], style, editor)[0]; // Only one line for measurement
         var textSize = this.textSize = editor.sizeFromClientToMarkups(lineSize.width, lineSize.height);
         
         var edgeH = DIMENSION_MARKUP_HEIGHT * strokeWidth / 2;
@@ -276,7 +283,7 @@ import { EditModeDimension } from './edit-modes/EditModeDimension'
 
         var direction = firstAnchor.clone().sub(secondAnchor).normalize();
 
-        var point2d = checkLineSegment(firstAnchor.x, firstAnchor.y, firstAnchor.x + direction.x * 200, firstAnchor.y + direction.y * 200, idTarget);
+        var point2d = this.checkLineSegment(firstAnchor.x, firstAnchor.y, firstAnchor.x + direction.x * 200, firstAnchor.y + direction.y * 200, idTarget);
         var point3d = point2d && this.viewer.clientToWorld(point2d.x, point2d.y);
 
         return point3d && point3d.point;
@@ -293,7 +300,7 @@ import { EditModeDimension } from './edit-modes/EditModeDimension'
         metadata.secondAnchor = [this.secondAnchor.x, this.secondAnchor.y].join(" ");
         metadata.text = String(this.currentText);
 
-        return addMarkupMetadata(this.shape, metadata);
+        return this.addMarkupMetadata(this.shape, metadata);
     };
 
 

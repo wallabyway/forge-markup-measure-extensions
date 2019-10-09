@@ -10,7 +10,7 @@ import { EditModeRectangle } from './edit-modes/EditModeRectangle'
     /**
      * Rectangle markup.
      *
-     * Implements a Rectangle [Markup]{@link Autodesk.Viewing.Extensions.Markups.Core.Markup}.
+     * Implements a Rectangle {@link Autodesk.Viewing.Extensions.Markups.Core.Markup|Markup}.
      * Included in documentation as an example of how to create
      * a specific markup type. Developers are encourage to look into this class's source code and copy
      * as much code as they need. Find link to source code below.
@@ -28,6 +28,9 @@ import { EditModeRectangle } from './edit-modes/EditModeRectangle'
 
         var styleAttributes = ['stroke-width', 'stroke-color', 'stroke-opacity', 'fill-color', 'fill-opacity'];
         Markup.call(this, id, editor, styleAttributes);
+
+        // Bind to this to pass this.globalManager
+        this.addMarkupMetadata = addMarkupMetadata.bind(this);
 
         this.type = MarkupTypes.MARKUP_TYPE_RECTANGLE;
         this.shape = createMarkupPathSvg();
@@ -92,7 +95,7 @@ import { EditModeRectangle } from './edit-modes/EditModeRectangle'
         metadata.size = [this.size.x, this.size.y].join(" ");
         metadata.rotation = String(this.rotation);
 
-        return addMarkupMetadata(this.shape, metadata);
+        return this.addMarkupMetadata(this.shape, metadata);
     };
 
     proto.getPath = function() {

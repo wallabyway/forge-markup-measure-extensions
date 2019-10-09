@@ -9,6 +9,7 @@
     export var Indicator = function(viewer, measurement, tool)
     {
         this.viewer = viewer;
+        this.setGlobalManager(viewer.globalManager);
         this.measurement = measurement;
         this.tool = tool;
         this.snapper = tool.getSnapper();
@@ -36,6 +37,7 @@
 
 
     var proto = Indicator.prototype;
+    av.GlobalManagerMixin.call(proto);
 
     proto.init = function() {
         return false;

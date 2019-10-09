@@ -10,14 +10,18 @@
         this.measureExtension = measureExtension;
         this.measureTool = this.measureExtension.measureTool;
         this.viewer = this.measureExtension.viewer;
+        this.setGlobalManager(this.viewer.globalManager);
         this.visible = false;
         this.buttonsList = [];
     }
 
     var proto = MeasureToolbar.prototype;
+    av.GlobalManagerMixin.call(MeasureToolbar.prototype);
 
     proto.init = function() {
         var self = this;
+
+        const _document = this.getDocument();
 
         // Add Measure tool toolbar to main toolbar
         var toolbar = this.viewer.getToolbar();
@@ -25,11 +29,13 @@
         var toolbarOptions = {};
         toolbarOptions.index = toolbar.indexOf(navigationBar) + 1;
         this.measureToolbar = new avu.ControlGroup(Autodesk.Viewing.TOOLBAR.MEASURETOOLSID);
+        this.measureToolbar.setGlobalManager(this.globalManager);
         toolbar.addControl(this.measureToolbar, toolbarOptions);
     
 
         // Create a button for the measure simple distance.
         this.measureSimpleDistanceBtn = new avu.Button("toolbar-measureTool-simple-distance");
+        this.measureSimpleDistanceBtn.setGlobalManager(this.globalManager);
         this.measureSimpleDistanceBtn.setToolTip("Distance");
         this.measureSimpleDistanceBtn.setIcon("adsk-icon-measure-distance-new");
         this.measureSimpleDistanceBtn.onClick = function() {
@@ -47,6 +53,7 @@
 
         // Create a button for the measure Angle.
         this.measureAngleBtn = new avu.Button("toolbar-measureTool-angle");
+        this.measureAngleBtn.setGlobalManager(this.globalManager);
         this.measureAngleBtn.setToolTip("Angle");
         this.measureAngleBtn.setIcon("adsk-icon-measure-angle-new");
         this.measureAngleBtn.onClick = function () {
@@ -63,6 +70,7 @@
         if (this.viewer.model && this.viewer.model.is2d()) {
             // Create a button for the measure distance.
             this.measureAreaBtn = new avu.Button("toolbar-measureTool-area");
+            this.measureAreaBtn.setGlobalManager(this.globalManager);
             this.measureAreaBtn.setToolTip("Area");
             this.measureAreaBtn.setIcon("adsk-icon-measure-area-new");
             this.measureAreaBtn.onClick = function() {
@@ -80,6 +88,7 @@
 
         // Create a button for the Calibration tool.
         this.calibrationToolBtn = new avu.Button( "toolbar-calibrationTool");
+        this.calibrationToolBtn.setGlobalManager(this.globalManager);
         this.calibrationToolBtn.setToolTip("Calibrate");
         this.calibrationToolBtn.setIcon("adsk-icon-measure-calibration");
         this.calibrationToolBtn.onClick = function(e) {
@@ -94,7 +103,7 @@
         this.measureToolbar.addControl(this.calibrationToolBtn);
         this.buttonsList[MeasureCommon.MeasurementTypes.CALIBRATION] = this.calibrationToolBtn;
 
-        var separator = document.createElement('div');
+        var separator = _document.createElement('div');
         separator.className = 'measure-toolbar-seperator';
 
         this.measureToolbar.container.appendChild(separator);
@@ -102,6 +111,7 @@
 
         // Create a button for the Trash.
         this.deleteBtn = new avu.Button( "toolbar-delete");
+        this.deleteBtn.setGlobalManager(this.globalManager);
         this.deleteBtn.setToolTip("Delete measurement");
         this.deleteBtn.setIcon("adsk-icon-measure-trash");
         this.deleteBtn.onClick = function() {
@@ -112,10 +122,11 @@
 
         // Create a button for the Settings panel.
         this.settingsBtn = new avu.Button( "toolbar-settings");
+        this.settingsBtn.setGlobalManager(this.globalManager);
         this.settingsBtn.setToolTip("Measure settings");
         this.settingsBtn.setIcon("adsk-icon-measure-settings");
 
-        this.settingsControlPanel = document.createElement('div');
+        this.settingsControlPanel = _document.createElement('div');
         this.settingsControlPanel.classList.add('docking-panel');
         this.settingsControlPanel.classList.add('docking-panel-container-solid-color-b');
         this.settingsControlPanel.classList.add('measure-settings-popup');
@@ -138,11 +149,11 @@
 
 
         // Settings Panel
-        this.table = document.createElement("table");
+        this.table = _document.createElement("table");
         this.table.classList.add("adsk-lmv-tftable");
         this.table.classList.add("calibration-table");
 
-        this.tbody = document.createElement("tbody");
+        this.tbody = _document.createElement("tbody");
         this.table.appendChild(this.tbody);
         this.settingsControlPanel.appendChild(this.table);
 
@@ -174,6 +185,7 @@
         }
 
         this.unitList = new avp.OptionDropDown("Unit type", this.tbody, unitNames, initialIndex, null, { paddingLeft: 0, paddingRight: 15 });
+        this.unitList.setGlobalManager(this.globalManager);
         this.unitList.addEventListener("change", function(e) {
             var index = self.unitList.selectedIndex;
             var toUnits = self.units[index].units;
@@ -183,6 +195,7 @@
         });
 
         this.precisionList = new avp.OptionDropDown("Precision", this.tbody, [], -1, null, { paddingLeft: 0, paddingRight: 15 });
+        this.precisionList.setGlobalManager(this.globalManager);
         this.precisionList.addEventListener("change", function(e) {
             var index = self.precisionList.selectedIndex;
             self.measureTool.setPrecision(index);
@@ -190,6 +203,7 @@
         });
 
         this.isolate = new avp.OptionCheckbox("Isolate measurement", this.tbody, false);
+        this.isolate.setGlobalManager(this.globalManager);
         this.isolate.addEventListener("change", function(e) {
             var enable = self.isolate.checked;
             self.measureTool.setIsolateMeasure(enable);
@@ -221,9 +235,10 @@
 
         // Create a button for 'Done'.
         this.measureDoneBtn = new avu.Button("toolbar-measureTool-done");
+        this.measureDoneBtn.setGlobalManager(this.globalManager);
         var doneText = Autodesk.Viewing.i18n.translate('Done');
         this.measureDoneBtn.setToolTip(doneText);
-        var cancelLabel = document.createElement('label');
+        var cancelLabel = _document.createElement('label');
         cancelLabel.textContent = doneText;
         var btnContainer = this.measureDoneBtn.container;
         btnContainer.appendChild(cancelLabel);
@@ -242,6 +257,12 @@
     };
 
     proto.destroy = function() {
+
+        // If toolbar was open, close it first. Otherwise, we leave ModelTools toolbar in a broken state.
+        if (this.visible) {
+            this.closeToolbar();
+        }
+
         if (this.measureToolbar) {
             this.measureToolbar.removeFromParent();
             this.measureToolbar = null;
@@ -297,6 +318,7 @@
     };            
 
     proto.setupPrecision = function() {
+        const _document = this.getDocument();
         while (this.precisionList.dropdownElement.lastChild) {
             this.precisionList.dropdownElement.removeChild(this.precisionList.dropdownElement.lastChild);
         }
@@ -311,7 +333,7 @@
         }
 
         for (var i = 0; i < precisions.length; ++i) {
-            var elem = document.createElement('option');
+            var elem = _document.createElement('option');
             elem.value = i;
             elem.textContent = precisions[i];
             this.precisionList.dropdownElement.appendChild(elem);

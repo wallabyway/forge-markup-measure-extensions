@@ -30,8 +30,8 @@ import CSS from './Markups.css' // IMPORTANT!!
      *
      * @tutorial feature_markup
      * @param {Autodesk.Viewing.Viewer3D} viewer - Viewer instance used to operate on.
-     * @param {object} options - Same Dictionary object passed into [Viewer3D]{@link Autodesk.Viewing.Viewer3D}'s constructor.
-     * [show()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#show}.
+     * @param {object} options - Same Dictionary object passed into {@link Autodesk.Viewing.Viewer3D|Viewer3D}'s constructor.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#show|show()}.
      * @param {boolean} [options.markupDisableHotkeys] - Disables hotkeys for copy, cut, paste, duplicate, undo, redo and deselect.
      * @param {Autodesk.Viewing.ToolInterface} [options.markupToolClass] - Class override for input handling.
      * Use it to override/extend default hotkeys and/or mouse/gesture input.
@@ -63,6 +63,12 @@ import CSS from './Markups.css' // IMPORTANT!!
 
         // Default Input handler.
         this.input = new InputHandler();
+        this.input.setGlobalManager(this.globalManager);
+
+        // Bind functions so they have access to globalManager
+        this.createSvgElement = createSvgElement.bind(this);
+        this.addSvgMetadata = addSvgMetadata.bind(this);
+        this.checkPolygon = checkPolygon.bind(this);
 
         // Extension will dispatch events.
         addTraitEventDispatcher(this);
@@ -103,10 +109,10 @@ import CSS from './Markups.css' // IMPORTANT!!
 
     var proto = MarkupsCore.prototype;
 
-    proto.load = function () {
+    proto.load = async function () {
 
         // Add layer where annotations will actually live
-        var svg = this.svg = createSvgElement('svg');
+        var svg = this.svg = this.createSvgElement('svg');
         setSvgParentAttributes(svg);
 
         // NOTE: Required since LMV renders Y coordinates upwards,
@@ -132,7 +138,9 @@ import CSS from './Markups.css' // IMPORTANT!!
         var toolClass = this.options.markupToolClass || MarkupTool;
         this.changeMarkupTool(toolClass, !this.options.markupDisableHotkeys);
 
-        this.snapper = new MeasureCommon.Snapper(this.viewer, {markupMode:true});
+        await this.viewer.loadExtension('Autodesk.Snapping');
+
+        this.snapper = new Autodesk.Viewing.Extensions.Snapping.Snapper(this.viewer, {markupMode:true});
         this.viewer.toolController.registerTool(this.snapper);
 
         return true;
@@ -209,8 +217,8 @@ import CSS from './Markups.css' // IMPORTANT!!
      * Toggle in and out of Edit mode. In Edit mode the user is able to draw markups on the canvas.
      *
      * See also
-     * [enterEditMode()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode} and
-     * [leaveEditMode()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#leaveEditMode}
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode|enterEditMode()} and
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#leaveEditMode|leaveEditMode()}
      */
     MarkupsCore.prototype.toggleEditMode = function() {
 
@@ -224,10 +232,10 @@ import CSS from './Markups.css' // IMPORTANT!!
     /**
      * Enables mouse interactions and mobile device gestures over the Viewer canvas to create or draw markups.
      *
-     * Exit Edit mode by calling [leaveEditMode()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#leaveEditMode}.
+     * Exit Edit mode by calling {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#leaveEditMode|leaveEditMode()}.
      *
      * See also
-     * [show()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#show}
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#show|show()}
      * @param {string} layerId - [optional] Identifier for the layer of markups to be edited. Example "Layer1".
      * @returns {boolean} Returns true if editMode is active
      */
@@ -259,7 +267,7 @@ import CSS from './Markups.css' // IMPORTANT!!
 
         // Initialize the edit mode layer if it does not exist
         if(!this.editModeSvgLayerNode) {
-            var parSvg = createSvgElement('g');
+            var parSvg = this.createSvgElement('g');
             this.editModeSvgLayerNode = {
                 markups: [],
                 svg: parSvg
@@ -349,7 +357,7 @@ import CSS from './Markups.css' // IMPORTANT!!
     /**
      * Exits Edit mode.
      *
-     * See also [enterEditMode()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode}.
+     * See also {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode|enterEditMode()}.
      *
      * @returns {boolean} Returns true if Edit mode has been deactivated
      */
@@ -405,10 +413,10 @@ import CSS from './Markups.css' // IMPORTANT!!
 
     /**
      * Enables loading of previously saved markups.
-     * Exit Edit mode by calling [hide()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#hide}.
+     * Exit Edit mode by calling {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#hide|hide()}.
      *
      * See also
-     * [enterEditMode()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode|enterEditMode()}.
      * @returns {boolean} Whether it successfully entered view mode or not.
      */
     MarkupsCore.prototype.show = function() {
@@ -454,7 +462,7 @@ import CSS from './Markups.css' // IMPORTANT!!
      * Removes any markup currently overlaid on the viewer. It exits Edit mode if it is active.
      *
      * See also
-     * [show()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#show}
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#show|show()}
      * @returns {boolean} Whether it successfully left view mode or not.
      */
     MarkupsCore.prototype.hide = function() {
@@ -497,7 +505,7 @@ import CSS from './Markups.css' // IMPORTANT!!
      * Markups that were created in a specific layer will not be removed.
      *
      * Markups should have been added while in
-     * [Edit mode]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode|Edit mode}.
      */
     MarkupsCore.prototype.clear = function() {
         // Can only clear specific layers when in the edit mode of that layer.
@@ -525,10 +533,10 @@ import CSS from './Markups.css' // IMPORTANT!!
     /**
      * Returns an SVG string with the markups created so far.
      * The SVG string can be reloaded using
-     * [loadMarkups]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#loadMarkups}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#loadMarkups|loadMarkups()}.
      *
      * Markups should have been added while in
-     * [Edit mode]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode|Edit mode}.
      * @returns {string} Returns an SVG element with all of the created markups in a string format.
      */
     MarkupsCore.prototype.generateData = function() {
@@ -546,7 +554,7 @@ import CSS from './Markups.css' // IMPORTANT!!
             defaultLayer = this.svgLayersMap[this.activeLayer].svg;
         }
 
-        var tmpNode = createSvgElement("svg");
+        var tmpNode = this.createSvgElement("svg");
         transferChildNodes(this.svg, tmpNode); // Transfer includes this.editModeSvgLayerNode
         transferChildNodes(defaultLayer, this.svg);
 
@@ -557,7 +565,7 @@ import CSS from './Markups.css' // IMPORTANT!!
         var metadataObject = {
             "data-model-version": "4"
         };
-        var metadataNode = addSvgMetadata(this.svg, metadataObject);
+        var metadataNode = this.addSvgMetadata(this.svg, metadataObject);
         var metadataNodes = [ metadataNode ];
 
         // Notify each markup to inject metadata
@@ -651,7 +659,7 @@ import CSS from './Markups.css' // IMPORTANT!!
         polygon.xVertices = new Float32Array([bbX0, bbX1, bbX1, bbX0]);
         polygon.yVertices = new Float32Array([bbY0, bbY0, bbY1, bbY1]);
 
-        var point2d = checkPolygon(polygon, idTarget);
+        var point2d = this.checkPolygon(polygon, idTarget);
         var point3d = point2d && this.viewer.clientToWorld(point2d.x, point2d.y);
         result.main = point3d && point3d.point;
 
@@ -706,7 +714,7 @@ import CSS from './Markups.css' // IMPORTANT!!
 
     /**
      * Changes the active drawing tool. For example, from the Arrow drawing tool to the Rectangle drawing tool.
-     * Only applicable while in [Edit mode]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode}.
+     * Only applicable while in {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode|Edit mode}.
      *
      * Supported values are:
      * - `new Autodesk.Viewing.Extensions.Markups.Core.EditModeArrow(MarkupsCoreInstance)`
@@ -741,7 +749,7 @@ import CSS from './Markups.css' // IMPORTANT!!
      * While the extension is active, the user can still draw markups.
      * Panning and zooming are only supported for orthographic cameras.
      *
-     * @return {boolean} Whether [allowNavigation()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#allowNavigation} can succeed.
+     * @return {boolean} Whether {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#allowNavigation|allowNavigation()} can succeed.
      */
     MarkupsCore.prototype.isNavigationAllowed = function() {
 
@@ -750,7 +758,7 @@ import CSS from './Markups.css' // IMPORTANT!!
 
     /**
      * Enables click, tap, and swipe behavior to allow camera zoom and panning operations. It is only available in
-     * [Edit mode]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode|Edit mode}.
      *
      * @param {boolean} allow - Whether camera navigation interactions are active or not.
      */
@@ -793,7 +801,7 @@ import CSS from './Markups.css' // IMPORTANT!!
 
     /**
      * Sets mouse interactions and mobile device gestures with markups. Only applicable in
-     * [Edit mode]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode|Edit mode}.
      * @param {boolean} disable - true to disable interactions with markups; false to enable interactions with markups; default false.
      */
     MarkupsCore.prototype.disableMarkupInteractions = function(disable) {
@@ -883,8 +891,8 @@ import CSS from './Markups.css' // IMPORTANT!!
     /**
      * Standard copy operation. Applies to any selected markup.<br>
      * See also
-     * [cut()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#cut} and
-     * [paste()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#paste}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#cut|cut()} and
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#paste|paste()}.
      */
     MarkupsCore.prototype.copy = function() {
 
@@ -894,8 +902,8 @@ import CSS from './Markups.css' // IMPORTANT!!
     /**
      * Standard cut operation. Applies to any selected markup, which gets removed from the screen at call time.<br>
      * See also
-     * [copy()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#copy} and
-     * [paste()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#paste}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#copy|copy()} and
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#paste|paste()}.
      */
     MarkupsCore.prototype.cut = function() {
 
@@ -906,8 +914,8 @@ import CSS from './Markups.css' // IMPORTANT!!
      * Standard paste operation. This function will paste any previously copied or cut markup.
      * Can be called repeatedly after a single copy or cut operation.<br>
      * See also
-     * [copy()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#copy} and
-     * [cut()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#cut}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#copy|copy()} and
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#cut|cut()}.
      */
     MarkupsCore.prototype.paste = function() {
 
@@ -919,8 +927,8 @@ import CSS from './Markups.css' // IMPORTANT!!
      * Will undo the previous operation.<br>
      * The Undo/Redo stacks will track any change done to the existing markups.<br>
      * See also
-     * [redo()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#redo} and
-     * [isUndoStackEmpty()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#isUndoStackEmpty}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#redo|redo()} and
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#isUndoStackEmpty|isUndoStackEmpty()}.
      */
     MarkupsCore.prototype.undo = function() {
 
@@ -930,8 +938,8 @@ import CSS from './Markups.css' // IMPORTANT!!
     /**
      * Will redo any previously undo operation.<br>
      * See also
-     * [undo()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#undo},
-     * [isRedoStackEmpty()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#isRedoStackEmpty}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#undo|undo()},
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#isRedoStackEmpty|isRedoStackEmpty()}.
      */
     MarkupsCore.prototype.redo = function() {
 
@@ -939,7 +947,7 @@ import CSS from './Markups.css' // IMPORTANT!!
     };
 
     /**
-     * Returns true when [undo()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#undo}
+     * Returns true when {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#undo|undo()}
      * produces no changes.
      * @return {boolean} true if there are no changes to undo; false if there are changes to undo.
      */
@@ -949,7 +957,7 @@ import CSS from './Markups.css' // IMPORTANT!!
     };
 
     /**
-     * Returns true when [redo()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#redo}
+     * Returns true when {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#redo|redo()}
      * produces no changes.
      * @return {boolean} true if there are no changes to redo; false if there are changes to redo.
      */
@@ -1008,7 +1016,7 @@ import CSS from './Markups.css' // IMPORTANT!!
      * Returns a markup with the specified ID. Returns null when not found.
      * The ID can be retrieved from the return value of getSelection(). <br>
      * See also
-     * [getSelection()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#getSelection}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#getSelection|getSelection()}.
      * @param {string} id Markup identifier.
      * @returns {Autodesk.Viewing.Extensions.Markups.Core.Markup} Returns markup object.
      */
@@ -1031,7 +1039,7 @@ import CSS from './Markups.css' // IMPORTANT!!
      * Selects or deselects a markup. A selected markup gets an overlayed UI that allows you to perform transformations
      * such as resizing, rotations, and translations. To deselect a markup, send a null value. <br>
      * See also
-     * [getMarkup()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#getMarkup}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#getMarkup|getMarkup()}.
      * @param {Autodesk.Viewing.Extensions.Markups.Core.Markup|null} markup The markup instance to select. Set the value to null to deselect a markup.
      */
     MarkupsCore.prototype.selectMarkup = function(markup) {
@@ -1061,7 +1069,7 @@ import CSS from './Markups.css' // IMPORTANT!!
      * Returns the currently selected markup. A selected markup has a custom UI overlayed that allows you to perform
      * resizing, rotations and translations.<br>
      * See also
-     * [selectMarkup()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#selectMarkup}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#selectMarkup|selectMarkup()}.
      * @returns {Autodesk.Viewing.Extensions.Markups.Core.Markup|null} Returns selected markup object; null if no markup is selected.
      */
     MarkupsCore.prototype.getSelection = function() {
@@ -1071,9 +1079,9 @@ import CSS from './Markups.css' // IMPORTANT!!
 
     /**
      * Deletes a markup from the canvas. Only applies while in
-     * [Edit mode]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode|Edit mode}.
      * @param {Autodesk.Viewing.Extensions.Markups.Core.Markup} markup - Markup object.
-     * @param {boolean} [dontAddToHistory] Whether delete action can be [undone]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#undo}.
+     * @param {boolean} [dontAddToHistory] Whether delete action can be {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#undo|undone}.
      */
     MarkupsCore.prototype.deleteMarkup = function(markup, dontAddToHistory) {
 
@@ -1297,10 +1305,10 @@ import CSS from './Markups.css' // IMPORTANT!!
      * Loads data (SVG string) for all markups in a specified layer (layerId) to the Viewer's canvas.<br>
      *
      * See also
-     * [unloadMarkups()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#unloadMarkups}, and
-     * [hideMarkups()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#hideMarkups}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#unloadMarkups|unloadMarkups()}, and
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#hideMarkups|hideMarkups()}.
      *
-     * @param {string} markupString - SVG string with markups. See also [generateData()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#generateData}.
+     * @param {string} markupString - SVG string with markups. See also {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#generateData|generateData()}.
      * @param {string} layerId - Identifier for the layer where the markup should be loaded to. Example "Layer1".
      * @return {boolean} Whether the markup string was able to be loaded successfully
      */
@@ -1397,7 +1405,7 @@ import CSS from './Markups.css' // IMPORTANT!!
 
     proto.createLayerNode = function() {
 
-        var newSvgLayerNode = createSvgElement('g');
+        var newSvgLayerNode = this.createSvgElement('g');
         newSvgLayerNode.setAttribute('cursor', 'default');
         return newSvgLayerNode;
     };
@@ -1406,8 +1414,8 @@ import CSS from './Markups.css' // IMPORTANT!!
      * Revert any changes made to the specific layer.
      *
      * See also
-     * [loadMarkups()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#loadMarkups} and
-     * [enterEditMode()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#loadMarkups|loadMarkups()} and
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode|enterEditMode()}.
      *
      * @param {string} layerId - ID of the layer to revert any changes that were made to it.
      * @returns {boolean} true if the layer was unloaded, false if the layer was not unloaded.
@@ -1463,11 +1471,11 @@ import CSS from './Markups.css' // IMPORTANT!!
      * Removes markups from the DOM (Document Object Model). This is helpful for freeing up memory.<br>
      *
      * See also
-     * [loadMarkups()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#loadMarkups},
-     * [unloadMarkupsAllLayers()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#unloadMarkupsAllLayers},
-     * [clear()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#clear},
-     * [hide()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#hide}, and
-     * [hideMarkups()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#hideMarkups}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#loadMarkups|loadMarkups()},
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#unloadMarkupsAllLayers|unloadMarkupsAllLayers()},
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#clear|clear()},
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#hide|hide()}, and
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#hideMarkups|hideMarkups()}.
      *
      * @param {string} layerId - ID of the layer containing all markups to unload (from the DOM).
      * @return {boolean} Whether the operation succeeded or not.
@@ -1517,11 +1525,11 @@ import CSS from './Markups.css' // IMPORTANT!!
      * Removes all markups loaded so far. Great for freeing up memory.
      *
      * See also
-     * [loadMarkups()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#loadMarkups},
-     * [unloadMarkups()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#unloadMarkups},
-     * [clear()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#clear},
-     * [hide()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#hide}, and
-     * [hideMarkups()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#hideMarkups}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#loadMarkups|loadMarkups()},
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#unloadMarkups|unloadMarkups()},
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#clear|clear()},
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#hide|hide()}, and
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#hideMarkups|hideMarkups()}.
      */
     MarkupsCore.prototype.unloadMarkupsAllLayers = function() {
         this.activeLayer = '';
@@ -1550,13 +1558,13 @@ import CSS from './Markups.css' // IMPORTANT!!
 
     /**
      * Hides all markups in a specified layer. Note that hidden markups will not be unloaded.
-     * Use the [showMarkups()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#showMarkups} method to make
+     * Use the {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#showMarkups|showMarkups()} method to make
      * them visible again; no additional parsing is required.
      *
      * See also
-     * [showMarkups()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#showMarkups},
-     * [unloadMarkups()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#unloadMarkups}, and
-     * [loadMarkups()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#loadMarkups}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#showMarkups|showMarkups()},
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#unloadMarkups|unloadMarkups()}, and
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#loadMarkups|loadMarkups()}.
      *
      * @param {string} layerId - ID of the layer containing all markups that should be hidden (in the DOM).
      * @return {boolean} Whether the operation succeeded or not.
@@ -1587,7 +1595,7 @@ import CSS from './Markups.css' // IMPORTANT!!
 
     /**
      * Unhides a layer of hidden markups
-     * ([hideMarkups()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#hideMarkups}).
+     * ({@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#hideMarkups|hideMarkups()}).
      *
      * @param {string} layerId - ID of the layer containing all markups to unload (from the DOM).
      * @return {boolean} Whether the operation succeeded or not.

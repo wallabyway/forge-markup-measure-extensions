@@ -63,12 +63,13 @@ import { Indicator } from './Indicator'
         this.endpoints[name] = {};
         this.endpoints[name].position = null;
 
-        var label = this.endpoints[name].label = document.createElement('div');
+        const _document = this.getDocument();
+        var label = this.endpoints[name].label = _document.createElement('div');
         label.className = 'calibration-endpoint';
 
         this.viewer.container.appendChild(label);
 
-        var text = document.createElement('div');
+        var text = _document.createElement('div');
         text.className = 'calibration-endpoint-text';
         text.textContent = name.toString();
         label.appendChild(text);
@@ -92,13 +93,14 @@ import { Indicator } from './Indicator'
         MeasureCommon.createCommonOverlay(this.viewer, this.overlayName);
         
         if (!this.calibrationLabel) {
-            this.calibrationLabel = document.createElement('div');
+            const _document = this.getDocument();
+            this.calibrationLabel = _document.createElement('div');
             this.calibrationLabel.className = 'calibration-label';
             this.hideLabel(this.calibrationLabel);
             this.viewer.container.appendChild(this.calibrationLabel);
             this.calibrationLabel.addEventListener('mousewheel', this.viewer.toolController.mousewheel);
 
-            var text = document.createElement('div');
+            var text = _document.createElement('div');
             text.className = 'calibration-label-text';
             this.calibrationLabel.appendChild(text);
         }
@@ -106,7 +108,7 @@ import { Indicator } from './Indicator'
         this.endpoints = [];
 
         this.handleButtonUpBinded = this.calibrationTool.handleButtonUp.bind(this.calibrationTool);
-        window.addEventListener('mouseup', this.handleButtonUpBinded);
+        this.addWindowEventListener('mouseup', this.handleButtonUpBinded);
 
         this.onCameraChangeBinded = this.onCameraChange.bind(this);
         this.viewer.addEventListener(av.CAMERA_CHANGE_EVENT, this.onCameraChangeBinded);
@@ -127,7 +129,7 @@ import { Indicator } from './Indicator'
         this.viewer.impl.clearOverlay(this.overlayName);
         this.viewer.impl.removeOverlayScene(this.overlayName);
         
-        window.removeEventListener('mouseup', this.handleButtonUpBinded);
+        this.removeWindowEventListener('mouseup', this.handleButtonUpBinded);
         this.viewer.removeEventListener(av.CAMERA_CHANGE_EVENT, this.onCameraChangeBinded);
     };
 

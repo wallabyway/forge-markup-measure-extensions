@@ -3,7 +3,7 @@
     /**
      * Fired whenever the drawing tool changes. For example, when the Arrow drawing
      * tool changes into the Rectangle drawing tool.
-     * See [MarkupsCore.changeEditMode()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#changeEditMode}
+     * See {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#changeEditMode|MarkupsCore.changeEditMode()}
      * for a list of all supported drawing tools (EditModes).
      * 
      * @event Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore#EVENT_EDITMODE_CHANGED
@@ -14,7 +14,7 @@
     /**
      * Fired when Edit mode has been enabled, which allows the end user to start
      * drawing markups over the Viewer canvas.
-     * See also [MarkupsCore.enterEditMode()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode}.
+     * See also {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode|MarkupsCore.enterEditMode()}.
      * 
      * @event Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore#EVENT_EDITMODE_ENTER
      * @type {string}
@@ -24,7 +24,7 @@
     /**
      * Fired when Edit mode has been disabled, preventing the end user from
      * drawing markups over the Viewer canvas.
-     * See also [MarkupsCore.leaveEditMode()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#leaveEditMode}.
+     * See also {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#leaveEditMode|MarkupsCore.leaveEditMode()}.
      * 
      * @event Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore#EVENT_EDITMODE_LEAVE
      * @type {string}

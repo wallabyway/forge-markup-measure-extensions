@@ -36,6 +36,12 @@ import { EditModeCallout } from './edit-modes/EditModeCallout'
         ];
 
         Markup.call(this, id, editor, styleAttributes);
+
+        // bind to this to pass this.globalManager
+        this.addMarkupMetadata = addMarkupMetadata.bind(this);
+        this.createSvgElement = createSvgElement.bind(this);
+
+
         this.type = MarkupTypes.MARKUP_TYPE_CALLOUT;
         this.textShape = createMarkupTextSvg();
         this.rectShape = createMarkupPathSvg();
@@ -275,7 +281,7 @@ import { EditModeCallout } from './edit-modes/EditModeCallout'
             editMode.textInputHelper.setStyle(style);
         }
 
-        var markup = createSvgElement('text');
+        var markup = this.createSvgElement('text');
         markup.setAttribute('id', 'markup');
         markup.setAttribute('alignment-baseline', 'middle');
 
@@ -292,7 +298,7 @@ import { EditModeCallout } from './edit-modes/EditModeCallout'
 
         this.currentTextLines.forEach(function(line){
 
-            var tspan = createSvgElement('tspan');
+            var tspan = this.createSvgElement('tspan');
 
             tspan.setAttribute('x', dx);
             tspan.setAttribute('y', dy);
@@ -334,7 +340,7 @@ import { EditModeCallout } from './edit-modes/EditModeCallout'
         metadata.text = String(this.currentText);
         metadata.isframeused = this.isFrameUsed ? 1 : 0;
 
-        return addMarkupMetadata(this.shape, metadata);
+        return this.addMarkupMetadata(this.shape, metadata);
     };
 
     /**

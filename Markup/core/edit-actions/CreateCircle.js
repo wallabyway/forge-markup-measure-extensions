@@ -7,8 +7,8 @@ import { cloneStyle } from '../StyleUtils'
     /**
      * Markup create circle action.
      *
-     * Implements an [EditAction]{@link Autodesk.Viewing.Extensions.Markups.Core.EditAction}
-     * for creating a Circle [Markup]{@link Autodesk.Viewing.Extensions.Markups.Core.Markup}.
+     * Implements an {@link Autodesk.Viewing.Extensions.Markups.Core.EditAction|EditAction}
+     * for creating a Circle {@link Autodesk.Viewing.Extensions.Markups.Core.Markup|Markup}.
      * Included in documentation as an example of how to create
      * a specific EditAction that deals with Markup creation.
      * Developers are encourage to look into this class's source code and copy

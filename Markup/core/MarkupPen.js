@@ -18,6 +18,9 @@ import { cloneStyle } from './StyleUtils'
         var styleAttributes = ['stroke-width', 'stroke-color','stroke-opacity'];
         Markup.call(this, id, editor, styleAttributes);
 
+        // bind to this to pass this.globalManager
+        this.addMarkupMetadata = addMarkupMetadata.bind(this);
+
         this.shape = createMarkupPathSvg();
 
         this.bindDomEvents();
@@ -143,7 +146,7 @@ import { cloneStyle } from './StyleUtils'
             return [point.x, point.y].join(" ");
         }).join(" ");
 
-        return addMarkupMetadata(this.shape, metadata);
+        return this.addMarkupMetadata(this.shape, metadata);
     };
 
     proto.getPath = function() {

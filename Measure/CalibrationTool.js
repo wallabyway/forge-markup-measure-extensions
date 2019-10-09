@@ -1,6 +1,8 @@
 import { CalibrationToolIndicator } from './CalibrationToolIndicator'
 import { CalibrationPanel } from './CalibrationPanels'
 
+const av = Autodesk.Viewing;
+
 //
 // /** @constructor */
 //
@@ -16,6 +18,8 @@ export var CalibrationTool = function( viewer, options, sharedMeasureConfig, sna
     var _viewer  = viewer;
     var _measurement = new MeasureCommon.Measurement(MeasureCommon.MeasurementTypes.MEASUREMENT_DISTANCE);
     var _options = options || {};
+
+    this.setGlobalManager(viewer.globalManager);
 
     // Shared State with MeasureTool and Indicator
     var _sharedMeasureConfig = sharedMeasureConfig;
@@ -278,7 +282,7 @@ export var CalibrationTool = function( viewer, options, sharedMeasureConfig, sna
         
         if (calibrationFactor) {
             _viewer.getExtension('Autodesk.Measure').enableCalibrationTool(false);
-            _viewer.dispatchEvent({ type: 'finished-calibration' });
+            _viewer.dispatchEvent({ type: MeasureCommon.Events.FINISHED_CALIBRATION , units: requestedUnits , scaleFactor: calibrationFactor, size: requestedSize});
         }
     };
 
@@ -309,19 +313,20 @@ export var CalibrationTool = function( viewer, options, sharedMeasureConfig, sna
     this.showPanel = function() {
 
         var self = this;
+        const _window = this.getWindow();
 
         if (_calibrationPanel) {
-            window.setTimeout(function () { _calibrationPanel.requestedSizeTextbox.focus();}, 0);
+            _window.setTimeout(function () { _calibrationPanel.requestedSizeTextbox.focus();}, 0);
             _calibrationPanel.setVisible(true);
             _calibrationPanel.updatePanelPosition(_measurement.indicator.labelPosition, _measurement.indicator.p1, _measurement.indicator.p2, _measurement.indicator.calibrationLabel.clientHeight);
-            window.addEventListener("keyup", function onKeyUp(e){
+            self.addWindowEventListener("keyup", function onKeyUp(e){
                 var key = e.key || String.fromCharCode(e.keyCode);
                 if (key == "Escape" && self.isActive()) {
                     self.hidePanel();
                     self.clearSize();
                     self.showAddCalibrationLabel();
                     
-                    window.removeEventListener("keyup", onKeyUp);
+                    self.removeWindowEventListener("keyup", onKeyUp);
                 }
             });
         }
@@ -768,3 +773,5 @@ export var CalibrationTool = function( viewer, options, sharedMeasureConfig, sna
         this.onCameraChange();
     };
 };
+
+av.GlobalManagerMixin.call(CalibrationTool.prototype);

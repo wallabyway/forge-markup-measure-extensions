@@ -18,6 +18,10 @@ import { EditModeArrow } from './edit-modes/EditModeArrow'
         var styleAttributes = ['stroke-width', 'stroke-color', 'stroke-opacity'];
         Markup.call(this, id, editor, styleAttributes);
 
+        // bind to this to pass this.globalManager
+        this.addMarkupMetadata = addMarkupMetadata.bind(this);
+        this.checkLineSegment = checkLineSegment.bind(this);
+
         this.type = MarkupTypes.MARKUP_TYPE_ARROW;
         this.constraintHeight = true;
 
@@ -180,7 +184,7 @@ import { EditModeArrow } from './edit-modes/EditModeArrow'
 
         var direction = head.clone().sub(tail).normalize();
 
-        var point2d = checkLineSegment(head.x, head.y, head.x + direction.x * 200, head.y + direction.y * 200, idTarget);
+        var point2d = this.checkLineSegment(head.x, head.y, head.x + direction.x * 200, head.y + direction.y * 200, idTarget);
         var point3d = point2d && this.viewer.clientToWorld(point2d.x, point2d.y);
 
         return point3d && point3d.point;
@@ -195,7 +199,7 @@ import { EditModeArrow } from './edit-modes/EditModeArrow'
         metadata.tail = [this.tail.x, this.tail.y].join(" ");
         metadata.rotation = String(this.rotation);
 
-        return addMarkupMetadata(this.shape, metadata);
+        return this.addMarkupMetadata(this.shape, metadata);
     };
 
     proto.getPath = function() {

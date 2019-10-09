@@ -29,7 +29,8 @@ import { SetRotation } from './edit-actions/SetRotation'
 
         this.containingDiv = containingDiv;
         this.editor = editor;
-        this.selectionLayer = createSelectionLayer();
+        this.setGlobalManager(this.editor.viewer.globalManager);
+        this.selectionLayer = createSelectionLayer.bind(this)();
 
         this.frameMargin = EDIT_FRAME_DEFAULT_MARGIN;
 
@@ -89,6 +90,7 @@ import { SetRotation } from './edit-actions/SetRotation'
         addTraitEventDispatcher(this);
     }
 
+    av.GlobalManagerMixin.call(EditFrame.prototype);
     var proto = EditFrame.prototype;
 
     proto.unload = function() {
@@ -311,7 +313,8 @@ import { SetRotation } from './edit-actions/SetRotation'
      */
     function createSelectionLayer() {
 
-        var selectionLayer = document.createElement('div');
+        const _document = this.getDocument();
+        var selectionLayer = _document.createElement('div');
         selectionLayer.style.position = 'absolute';
         selectionLayer.style.top = 0;
         selectionLayer.style.bottom = 0;
@@ -333,7 +336,8 @@ import { SetRotation } from './edit-actions/SetRotation'
      */
     function createDragPoint(position) {
 
-        var point = document.createElement('div');
+        const _document = this.getDocument();
+        var point = _document.createElement('div');
 
         setResizeCursor(point, position);
         point.className = 'selector-drag-point autodesk-markups-extension-core-make-me-bigger sdp-handle-' + position;
@@ -344,7 +348,8 @@ import { SetRotation } from './edit-actions/SetRotation'
     }
 
     function createRotatePoint () {
-        var point = document.createElement('div');
+        const _document = this.getDocument();
+        var point = _document.createElement('div');
         point.classList.add('adsk-viewing-viewer');
         point.classList.add('selector-rotate-point');
         point.classList.add('autodesk-markups-extension-core-make-me-bigger');
@@ -354,7 +359,8 @@ import { SetRotation } from './edit-actions/SetRotation'
     }
 
     function createRotationBridge() {
-        var rotationBridge = document.createElement('div');
+        const _document = this.getDocument();
+        var rotationBridge = _document.createElement('div');
         rotationBridge.classList.add('adsk-viewing-viewer');
         rotationBridge.classList.add('selector-rotate-point');
         rotationBridge.classList.add('autodesk-markups-extension-core-make-me-bigger');
@@ -397,7 +403,7 @@ import { SetRotation } from './edit-actions/SetRotation'
 
         ['n', 's', 'w', 'e', 'nw', 'ne', 'sw', 'se'].forEach(function (direction) {
             //store the drag point and put it in the DOM
-            this.selection.handle[direction] = createDragPoint(direction);
+            this.selection.handle[direction] = createDragPoint.call(this, direction);
             selector.appendChild(this.selection.handle[direction]);
         }.bind(this));
     }
@@ -431,14 +437,15 @@ import { SetRotation } from './edit-actions/SetRotation'
      */
     function createSelectorBox() {
 
-        var selectorBox = document.createElement('div');
+        const _document = this.getDocument();
+        var selectorBox = _document.createElement('div');
         togglePointerEvents(selectorBox, true);
         selectorBox.classList.add('selector-box');
 
-        this.selection.rotationBridge = createRotationBridge();
+        this.selection.rotationBridge = createRotationBridge.bind(this)();
         selectorBox.appendChild(this.selection.rotationBridge);
 
-        this.selection.rotationHandle = createRotatePoint();
+        this.selection.rotationHandle = createRotatePoint.bind(this)();
         selectorBox.appendChild(this.selection.rotationHandle);
 
         createDragPoints.bind(this)(selectorBox);
@@ -570,7 +577,8 @@ import { SetRotation } from './edit-actions/SetRotation'
         ignoreFirstMouseMove = !av.isMobileDevice() && av.isTouchDevice();
         //a synthetic start means that the event was triggered manually and not as a
         //result of a mousedown on the edit frame
-        var syntheticStart = !(event instanceof MouseEvent);
+        const _window = this.getWindow();
+        var syntheticStart = !(event instanceof _window.MouseEvent);
 
         //during a real mousedown, ignore events originating from a resizing handle
         if (!syntheticStart && (isDragPoint(event.target) || isRotatePoint(event.target))) return;

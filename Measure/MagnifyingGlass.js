@@ -1,4 +1,6 @@
 
+const av = Autodesk.Viewing;
+
 export var MagnifyingGlass = function(viewer) {
 
     var _viewer = viewer;
@@ -17,6 +19,7 @@ export var MagnifyingGlass = function(viewer) {
     var _needsClear = false;
     var av = Autodesk.Viewing;
     
+    this.setGlobalManager(viewer.globalManager);
 
     this.isActive = function() {
 
@@ -30,19 +33,21 @@ export var MagnifyingGlass = function(viewer) {
     };
 
     this.updateMagnifyingGlass = function() {
+        const _window = this.getWindow();
+        const _document = this.getDocument();
         if (_needsClear) {
             _magnifyingGlassCanvas && _magnifyingGlassCanvas.classList.remove('visible');
             _needsClear = false;
         }
         else {
-            var pixelRatio = window.devicePixelRatio;
+            var pixelRatio = _window.devicePixelRatio;
             var diameter = 2 * _radius;
             var normlizedDiameter = diameter * pixelRatio;
             var x = pixelRatio * (_clientX - (_radius  / _zoom));
             var y = pixelRatio * (_clientY - (_radius  / _zoom));
             
             if (!_magnifyingGlassCanvas) {
-                _magnifyingGlassCanvas = document.createElement("canvas");
+                _magnifyingGlassCanvas = _document.createElement("canvas");
                 _magnifyingGlassCanvas.className = 'magnifying-glass';
                 _magnifyingGlassCanvas.width = normlizedDiameter;
                 _magnifyingGlassCanvas.height = normlizedDiameter;
@@ -192,3 +197,5 @@ export var MagnifyingGlass = function(viewer) {
     };
 
 };
+
+av.GlobalManagerMixin.call(MagnifyingGlass.prototype);

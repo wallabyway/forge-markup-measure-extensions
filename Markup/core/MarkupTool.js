@@ -170,12 +170,12 @@
             }
             return true; // Consume event
         };
-        this.handleWheelInput = function(delta) {
+        this.handleWheelInput = function(delta, event) {
             if (this.allowNav || this.is2d) {
                 // If pan tool won't handle wheel input, then pass over the event
                 if (this.panTool && this.panTool.handleWheelInput) {
                     this.coreExt.callSnapperMouseMove();
-                    return this.panTool.handleWheelInput(delta);
+                    return this.panTool.handleWheelInput(delta, event);
                 }
                 else
                     return false;

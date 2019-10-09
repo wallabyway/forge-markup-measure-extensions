@@ -18,6 +18,9 @@ import { EditModePolyline } from './edit-modes/EditModePolyline'
         var styleAttributes = ['stroke-width', 'stroke-color','stroke-opacity', 'fill-color', 'fill-opacity'];
         Markup.call(this, id, editor, styleAttributes);
 
+        // bind to this to pass this.globalManager
+        this.addMarkupMetadata = addMarkupMetadata.bind(this);
+
         this.type = MarkupTypes.MARKUP_TYPE_POLYLINE;
         this.shape = createMarkupPathSvg('path');
 
@@ -126,7 +129,7 @@ import { EditModePolyline } from './edit-modes/EditModePolyline'
             return [point.x, point.y].join(" ");
         }).join(" ");
 
-        return addMarkupMetadata(this.shape, metadata);
+        return this.addMarkupMetadata(this.shape, metadata);
     };
 
     proto.getPath = function() {

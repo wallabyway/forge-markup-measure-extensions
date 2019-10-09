@@ -3,7 +3,7 @@
     /**
      * Base class for all markup edit actions.
      *
-     * EditActions encapsulate {@link Autodesk.Viewing.Extensions.Markups.Core.Markup  Markup}
+     * EditActions encapsulate {@link Autodesk.Viewing.Extensions.Markups.Core.Markup|Markup}
      * operations (such as creation, edition and deletion) that hook into the undo/redo system.
      *
      * The minimum set of methods to implement on an EditAction extension are:
@@ -12,9 +12,9 @@
      * - redo()
      *
      * A good set of classes to check their implementation are:
-     * - [CreateCircle]{@link Autodesk.Viewing.Extensions.Markups.Core.CreateCircle}.
-     * - [DeleteCircle]{@link Autodesk.Viewing.Extensions.Markups.Core.DeleteCircle}.
-     * - [SetCircle]{@link Autodesk.Viewing.Extensions.Markups.Core.SetCircle}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.CreateCircle|CreateCircle}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.DeleteCircle|DeleteCircle}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.SetCircle|SetCircle}.
      *
      * @tutorial feature_markup
      * @constructor

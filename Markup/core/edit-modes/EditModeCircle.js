@@ -9,7 +9,7 @@ import * as MarkupTypes from '../MarkupTypes'
     /**
      * Markup circle edit mode.
      *
-     * Implements a Circle [EditMode]{@link Autodesk.Viewing.Extensions.Markups.Core.EditMode}.
+     * Implements a Circle {@link Autodesk.Viewing.Extensions.Markups.Core.EditMode|EditMode}.
      * Included in documentation as an example of how to create
      * an EditMode for a specific markup type. Developers are encourage to look into this class's source code and copy
      * as much code as they need. Find link to source code below.

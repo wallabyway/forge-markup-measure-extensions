@@ -33,6 +33,7 @@ import { isTouchDevice } from '../MarkupsCoreUtils'
         this.isMouseDown = false;
     }
 
+    av.GlobalManagerMixin.call(InputHandler.prototype);
     var proto = InputHandler.prototype;
 
     proto.attachTo = function(editor) {
@@ -90,8 +91,8 @@ import { isTouchDevice } from '../MarkupsCoreUtils'
             this.editor.svg.addEventListener('dblclick', this.onMouseDoubleClickBinded);
             this.editor.svg.addEventListener('wheel', this.onWheelBinded);
             this.editor.svg.addEventListener('DOMMouseScroll', this.onWheelBinded); // Firefox
-            document.addEventListener('mousemove', this.onMouseMoveBinded);
-            document.addEventListener('mouseup', this.onMouseUpBinded);
+            this.addDocumentEventListener('mousemove', this.onMouseMoveBinded);
+            this.addDocumentEventListener('mouseup', this.onMouseUpBinded);
         }
         else if (!state && _mouseEnabled)
         {
@@ -99,8 +100,8 @@ import { isTouchDevice } from '../MarkupsCoreUtils'
             this.editor.svg.removeEventListener('dblclick', this.onMouseDoubleClickBinded);
             this.editor.svg.removeEventListener('wheel', this.onWheelBinded);
             this.editor.svg.removeEventListener('DOMMouseScroll', this.onWheelBinded);
-            document.removeEventListener('mousemove', this.onMouseMoveBinded);
-            document.removeEventListener('mouseup', this.onMouseUpBinded);
+            this.removeDocumentEventListener('mousemove', this.onMouseMoveBinded);
+            this.removeDocumentEventListener('mouseup', this.onMouseUpBinded);
 
         }
 
@@ -112,8 +113,8 @@ import { isTouchDevice } from '../MarkupsCoreUtils'
 
         this.hammer && this.hammer.destroy();
 
-        document.removeEventListener('mousemove', this.onMouseMoveBinded);
-        document.removeEventListener('mouseup', this.onMouseUpBinded);
+        this.removeDocumentEventListener('mousemove', this.onMouseMoveBinded);
+        this.removeDocumentEventListener('mouseup', this.onMouseUpBinded);
 
         if (this.editor) {
             this.editor.svg.removeEventListener('mousedown', this.onMouseDownBinded);
@@ -209,9 +210,10 @@ import { isTouchDevice } from '../MarkupsCoreUtils'
 
     proto.onMouseDownRightClick = function(event) {
 
+        const _document = this.getDocument();
         // Don't do blur in full screen (IE issue)
         if (!(av.isIE11 && av.inFullscreen())) {
-            document.activeElement && document.activeElement.blur && document.activeElement.blur();
+            _document.activeElement && _document.activeElement.blur && _document.activeElement.blur();
         }
 
         var controller = this.editor.viewer.toolController;

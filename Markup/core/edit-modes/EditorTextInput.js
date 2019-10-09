@@ -6,6 +6,8 @@ import { addTraitEventDispatcher } from '../MarkupsCoreUtils'
 import { cloneStyle } from '../StyleUtils'
 import { DomElementStyle } from '../DomElementStyle'
 
+const av = Autodesk.Viewing;
+
     /**
      * Auxiliary class that handles all input for the Label Markup (MarkupText.js)
      * It instantiates a TEXTAREA where the user can input text. When user input is
@@ -20,19 +22,21 @@ import { DomElementStyle } from '../DomElementStyle'
 
         this.parentDiv = parentDiv;
         this.editor = editor;
+        this.setGlobalManager(editor.viewer.globalManager);
 
         // Constants
         this.EVENT_TEXT_CHANGE = 'EVENT_CO2_TEXT_CHANGE';
         this.EVENT_TEXT_SET_ACTIVE = 'EVENT_CO2_TEXT_SET_ACTIVE';
         this.EVENT_TEXT_SET_INACTIVE = 'EVENT_CO2_TEXT_SET_INACTIVE';
 
+        const _document = this.getDocument();
         // The actual TextArea input
         if (singleLine) {
-            this.textArea = document.createElement('input');
+            this.textArea = _document.createElement('input');
             this.textArea.setAttribute('type', 'text');
         }
         else {
-            this.textArea = document.createElement('textarea');
+            this.textArea = _document.createElement('textarea');
             this.textArea.rows = '1';
             if (!Autodesk.Viewing.isIE11) { // auto parameter not available in IE11
                 this.textArea.dir = 'auto';
@@ -45,7 +49,7 @@ import { DomElementStyle } from '../DomElementStyle'
         this.textArea.setAttribute('data-i18n', defaultText);
         this.startingHeight = 0;
 
-        autosize(this.textArea);
+        autosize.bind(this)(this.textArea);
 
         var ro = new ResizeObserver(function(entries, observer) {
             this.setEditFrame();
@@ -67,12 +71,13 @@ import { DomElementStyle } from '../DomElementStyle'
                 .setAttribute('padding', '10px');
 
         // Helper div to measure text width
-        this.measureDiv = document.createElement('div');
+        this.measureDiv = _document.createElement('div');
 
         // Become an event dispatcher
         addTraitEventDispatcher(this);
     }
 
+    av.GlobalManagerMixin.call(EditorTextInput.prototype);
     var proto = EditorTextInput.prototype;
 
     proto.destroy = function() {
@@ -110,7 +115,8 @@ import { DomElementStyle } from '../DomElementStyle'
         if (!Autodesk.Viewing.isIOSDevice()) {
           // Focus on next frame
           var txtArea = this.textArea;
-          window.requestAnimationFrame(function(){
+          const _window = this.getWindow();
+          _window.requestAnimationFrame(function(){
               txtArea.focus();
           });
         }
@@ -139,7 +145,7 @@ import { DomElementStyle } from '../DomElementStyle'
             this.textArea.blur();
         }
 
-        window.removeEventListener('resize', this.onResizeBinded);
+        this.removeWindowEventListener('resize', this.onResizeBinded);
 
         if (this.textMarkup) {
             this.textMarkup = null;

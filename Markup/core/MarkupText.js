@@ -34,6 +34,10 @@ import { EditModeText } from './edit-modes/EditModeText'
 
         Markup.call(this, id, editor, styleAttributes);
 
+        // Bind to this to pass globalManager
+        this.createSvgElement = createSvgElement.bind(this);
+        this.addMarkupMetadata = addMarkupMetadata.bind(this);
+
         this.type = MarkupTypes.MARKUP_TYPE_TEXT;
         this.shape = createMarkupTextSvg();
         this.constraintRotation = true;
@@ -261,7 +265,7 @@ import { EditModeText } from './edit-modes/EditModeText'
             editMode.textInputHelper.setStyle(style);
         }
 
-        var markup = createSvgElement('text');
+        var markup = this.createSvgElement('text');
         markup.setAttribute('id', 'markup');
         markup.setAttribute('alignment-baseline', 'middle');
 
@@ -278,7 +282,7 @@ import { EditModeText } from './edit-modes/EditModeText'
 
         this.currentTextLines.forEach(function(line){
 
-            var tspan = createSvgElement('tspan');
+            var tspan = this.createSvgElement('tspan');
 
             tspan.setAttribute('x', dx);
             tspan.setAttribute('y', dy);
@@ -303,7 +307,7 @@ import { EditModeText } from './edit-modes/EditModeText'
         metadata.size = [this.size.x, this.size.y].join(" ");
         metadata.text = String(this.currentText);
 
-        return addMarkupMetadata(this.shape, metadata);
+        return this.addMarkupMetadata(this.shape, metadata);
     };
 
     /**

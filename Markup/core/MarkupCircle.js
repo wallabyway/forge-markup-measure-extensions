@@ -18,6 +18,9 @@ import { EditModeCircle } from './edit-modes/EditModeCircle'
         var styleAttributes = ['stroke-width', 'stroke-color', 'stroke-opacity', 'fill-color', 'fill-opacity'];
         Markup.call(this, id, editor, styleAttributes);
 
+        // bind to this to pass this.globalManager
+        this.addMarkupMetadata = addMarkupMetadata.bind(this);
+
         this.type = MarkupTypes.MARKUP_TYPE_CIRCLE;
         this.shape = createMarkupPathSvg();
 
@@ -71,7 +74,7 @@ import { EditModeCircle } from './edit-modes/EditModeCircle'
         metadata.size = [this.size.x, this.size.y].join(" ");
         metadata.rotation = String(this.rotation);
 
-        return addMarkupMetadata(this.shape, metadata);
+        return this.addMarkupMetadata(this.shape, metadata);
     };
 
     proto.getPath = function() {

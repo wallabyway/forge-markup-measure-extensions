@@ -5,11 +5,13 @@ import { createStyle, copyStyle } from '../StyleUtils'
 import { addTraitEventDispatcher, removeTraitEventDispatcher, sign } from '../MarkupsCoreUtils'
 import { SetStyle } from '../edit-actions/SetStyle'
 
+const av = Autodesk.Viewing;
+
     /**
      * Base class for all markup edit modes.
      *
      * An EditMode is responsible for handling user input to create and edit a
-     * [Markup]{@link Autodesk.Viewing.Extensions.Markups.Core.Markup}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.Markup|Markup}.
      *
      * Any class extending Markup should contain at least the following methods:
      * - deleteMarkup()
@@ -17,7 +19,7 @@ import { SetStyle } from '../edit-actions/SetStyle'
      * - onMouseMove()
      *
      * A good reference is the Circle EditMode implementation available in
-     * [EditModeCircle.js]{@link Autodesk.Viewing.Extensions.Markups.Core.EditModeCircle}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.EditModeCircle|EditModeCircle}.
      *
      * @tutorial feature_markup
      * @constructor
@@ -32,6 +34,7 @@ import { SetStyle } from '../edit-actions/SetStyle'
 
         this.editor = editor;
         this.viewer = editor.viewer;
+        this.setGlobalManager(this.viewer.globalManager);
         this.type = type;
         this.selectedMarkup = null;
         this.dragging = false;
@@ -53,6 +56,7 @@ import { SetStyle } from '../edit-actions/SetStyle'
         addTraitEventDispatcher(this);
     }
 
+    av.GlobalManagerMixin.call(EditMode.prototype);
     var proto = EditMode.prototype;
 
     proto.destroy = function() {

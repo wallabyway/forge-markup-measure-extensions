@@ -1,6 +1,8 @@
 import { MeasurementsManager } from './MeasurementsManager'
 import { MeasureToolIndicator } from './MeasureToolIndicator'
 
+const av = Autodesk.Viewing;
+
 //
 // /** @constructor */
 //
@@ -11,6 +13,8 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
     var _options = options || {};
     var _names  = ["measure"];
     var _priority = 50;
+
+    this.setGlobalManager(viewer.globalManager);
 
     // Shared State with CalibrationTool and Indicator
     var _sharedMeasureConfig = sharedMeasureConfig;
@@ -253,6 +257,7 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
     {
         if (_sharedMeasureConfig.units !== units ) {
             _sharedMeasureConfig.units = units;
+            _viewer.dispatchEvent({ type: MeasureCommon.Events.DISPLAY_UNITS_CHANGED, units: units});
 
             for (var key in _measurementsManager.measurementsList) {
                 if (_measurementsManager.measurementsList.hasOwnProperty(key)) {
@@ -397,11 +402,45 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
             deltaY: this.getDistanceY(),
             deltaZ: this.getDistanceZ(),
             angle: this.getAngle(),
+            area: this.getArea(),
             unitType: _sharedMeasureConfig.units,
             precision: _sharedMeasureConfig.precision
         };
 
         return measurement;
+    };
+
+    /**
+     * @param unitType
+     * @param precision
+     * @returns {Array.<Object>}
+     */
+
+    this.getMeasurementList = function(unitType, precision) {
+        var list = [];
+        var measurement = null;
+        // TODO: These need to match the measurement SnapTypes
+        var geomTypes = ['Vertex', 'Edge', 'Face', 'Circular Arc', 'Curved Edge', 'Curved Face'];
+        var measurementList = Object.keys(_measurementsManager.measurementsList);
+
+        for(let i = 0; i < measurementList.length; i++) {
+            measurement = _measurementsManager.measurementsList[measurementList[i]];
+            
+            var result = {
+              from: geomTypes[measurement.getGeometry(1).type],
+              to: geomTypes[measurement.getGeometry(2).type],
+              distance: this.getDistanceXYZ(measurement),
+              deltaX: this.getDistanceX(measurement),
+              deltaY: this.getDistanceY(measurement),
+              deltaZ: this.getDistanceZ(measurement),
+              angle: this.getAngle(measurement),
+              area: this.getArea(measurement),
+              unitType: unitType || _sharedMeasureConfig.units,
+              precision: precision || _sharedMeasureConfig.precision
+            }
+            list.push(result);
+        }
+        return list;
     };
 
     this.clearCurrentMeasurement = function() {
@@ -1101,4 +1140,6 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         return false;
     };
 };
+
+av.GlobalManagerMixin.call(MeasureTool.prototype);
 

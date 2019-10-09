@@ -17,6 +17,9 @@
     // et ViewerPanelMixin to a no-op in headless mode
     const ViewerPanelMixin = (ave && ave.ViewerPanelMixin) || function () {};
 
+    const _gWindow = av.getGlobal();
+    const _gDocument = _gWindow.document;
+
     //
     // /** @constructor */
     //
@@ -39,6 +42,8 @@
 
         this.container.classList.add('calibration-panel');
 
+        this.setGlobalManager && this.setGlobalManager(viewer.globalManager);
+
         this.addEventListener( this.closer, "click", function(e) {
             self.setVisible(false);
             self.calibrationTool.clearSize();
@@ -53,20 +58,22 @@
 
         this.createScrollContainer(options);
 
-        this.calibrationMenu = document.createElement("div");
+        const _document = (this.getDocument && this.getDocument()) || _gDocument;
+
+        this.calibrationMenu = _document.createElement("div");
 
         this.scrollContainer.appendChild( this.calibrationMenu );
 
         // Table
-        this.table = document.createElement("table");
+        this.table = _document.createElement("table");
         this.table.className = "adsk-lmv-tftable calibration-table";
-        this.tbody = document.createElement("tbody");
+        this.tbody = _document.createElement("tbody");
         this.table.appendChild(this.tbody);
         this.calibrationMenu.appendChild(this.table);
 
         // Define Size Row
         this.row = this.tbody.insertRow(0);
-        this.requestedSizeTextbox = document.createElement('input');
+        this.requestedSizeTextbox = _document.createElement('input');
         this.requestedSizeTextbox.className = 'docking-panel-textbox';
         this.requestedSizeTextbox.type = 'text';
         this.requestedSizeTextbox.autofocus= 'true';
@@ -112,7 +119,7 @@
 
         var caption = "Define Size";
         var cell = this.row.insertCell(0);
-        this.caption = document.createElement("div");
+        this.caption = _document.createElement("div");
         this.caption.setAttribute("data-i18n", caption);
         this.caption.textContent = av.i18n.translate(caption);
         cell.appendChild(this.caption);
@@ -134,12 +141,13 @@
             unitNames.push(this.units[i].name);
         }
         this.unitList = new avp.OptionDropDown("Unit type", this.tbody, unitNames, 0, null, { paddingLeft: 0, paddingRight: 15 });
+        this.unitList.setGlobalManager(this.globalManager);
         this.addEventListener(this.unitList, "change", function(e) {
             self.updateLabel();
         });
 
         // Set Calibration button
-        var setCalibration = document.createElement('div');
+        var setCalibration = _document.createElement('div');
         setCalibration.classList.add('docking-panel-primary-button');
         setCalibration.classList.add('calibration-button');
 
@@ -276,30 +284,34 @@
         this.container.style.width = "380px";
         this.container.style.height = "190px";
         
+        this.setGlobalManager && this.setGlobalManager(viewer.globalManager);
+
         if (!options.heightAdjustment)
             options.heightAdjustment = 70;
         if (!options.marginTop)
             options.marginTop = 0;
         options.left = false;
 
+        const _document = (this.getDocument && this.getDocument()) || _gDocument;
+
         this.createScrollContainer(options);
-        this.dialogBox = document.createElement("div");
+        this.dialogBox = _document.createElement("div");
         this.scrollContainer.appendChild( this.dialogBox );
 
         // text
-        var calibrateNow = document.createElement('div');
+        var calibrateNow = _document.createElement('div');
         calibrateNow.className = 'calibration-text';
         var text = "Calibration Message";
         calibrateNow.setAttribute("data-i18n", text);
         calibrateNow.textContent = av.i18n.translate(text);
         this.dialogBox.appendChild(calibrateNow);
 
-        var buttonsWrapper = document.createElement('div');
+        var buttonsWrapper = _document.createElement('div');
         buttonsWrapper.className = 'calibration-buttons-wrapper';
         this.dialogBox.appendChild(buttonsWrapper);
         
         // Cancel button
-        var cancel = document.createElement('div');
+        var cancel = _document.createElement('div');
         cancel.classList.add('docking-panel-secondary-button');
         cancel.classList.add('calibration-button-left');
         cancel.setAttribute("data-i18n", "Cancel");
@@ -310,7 +322,7 @@
         buttonsWrapper.appendChild(cancel);
 
         // Calibrate-Now button
-        var calibrateNowButton = document.createElement('div');
+        var calibrateNowButton = _document.createElement('div');
         calibrateNowButton.classList.add('docking-panel-primary-button');
         calibrateNowButton.classList.add('calibration-button-right');
         calibrateNowButton.setAttribute("data-i18n", "Calibrate Now");

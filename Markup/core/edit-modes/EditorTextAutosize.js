@@ -41,7 +41,8 @@ try {
 } catch (e) {
     // IE does not support `new Event()`
     createEvent = function (name) {
-        var evt = document.createEvent('Event');
+        const _document = Autodesk.Viewing.getGlobal().document;
+        var evt = _document.createEvent('Event');
         evt.initEvent(name, true, false);
         return evt;
     };
@@ -54,8 +55,10 @@ function assign(ta) {
     var clientWidth = ta.clientWidth;
     var cachedHeight = null;
 
+    const self = this;
     function init() {
-        var style = window.getComputedStyle(ta, null);
+        const _window = self.getWindow();
+        var style = _window.getComputedStyle(ta, null);
 
         if (style.resize === 'vertical') {
             ta.style.resize = 'none';
@@ -112,7 +115,8 @@ function assign(ta) {
     function resize() {
         var originalHeight = ta.style.height;
         var overflows = getParentOverflows(ta);
-        var docTop = document.documentElement && document.documentElement.scrollTop; // Needed for Mobile IE (ticket #240)
+        const _document = self.getDocument();
+        var docTop = _document.documentElement && _document.documentElement.scrollTop; // Needed for Mobile IE (ticket #240)
 
         ta.style.height = '';
 
@@ -138,15 +142,16 @@ function assign(ta) {
         });
 
         if (docTop) {
-            document.documentElement.scrollTop = docTop;
+            _document.documentElement.scrollTop = docTop;
         }
     }
 
     function update() {
         resize();
 
+        const _window = self.getWindow();
         var styleHeight = Math.round(parseFloat(ta.style.height));
-        var computed = window.getComputedStyle(ta, null);
+        var computed = _window.getComputedStyle(ta, null);
 
         // Using offsetHeight as a replacement for computed.height in IE, because IE does not account use of border-box
         var actualHeight = computed.boxSizing === 'content-box' ? Math.round(parseFloat(computed.height)) : ta.offsetHeight;
@@ -187,7 +192,7 @@ function assign(ta) {
     };
 
     var destroy = (function (style) {
-        window.removeEventListener('resize', pageResize, false);
+        self.removeWindowEventListener('resize', pageResize, false);
         ta.removeEventListener('input', update, false);
         ta.removeEventListener('keyup', update, false);
         ta.removeEventListener('autosize:destroy', destroy, false);
@@ -215,7 +220,7 @@ function assign(ta) {
         ta.addEventListener('keyup', update, false);
     }
 
-    window.addEventListener('resize', pageResize, false);
+    self.addWindowEventListener('resize', pageResize, false);
     ta.addEventListener('input', update, false);
     ta.addEventListener('autosize:update', update, false);
     ta.style.overflowX = 'hidden';
@@ -245,6 +250,7 @@ function update(ta) {
 
 function isRuntimeSupported() {
     // Don't support Node.js and IE8 (or lower)
+    const _window = Autodesk.Viewing.getGlobal();
     if (typeof window === 'undefined' || typeof window.getComputedStyle !== 'function')
         return false;
     return true;
@@ -254,9 +260,10 @@ const RUNTIME_SUPPORTED = isRuntimeSupported();
 
 
 export var autosize = function(el, options) {
+    const self = this;
     if (RUNTIME_SUPPORTED && el) {
         Array.prototype.forEach.call(el.length ? el : [el], function (x) {
-            return assign(x, options);
+            return assign.bind(self)(x, options);
         });
     } 
     return el;

@@ -1,4 +1,5 @@
 import { Indicator } from './Indicator'
+import { getPolygonVisualCenter } from "./PolygonCentroid";
 
     var av = Autodesk.Viewing;
     var MeasureCommon = Autodesk.Viewing.MeasureCommon;
@@ -101,7 +102,7 @@ import { Indicator } from './Indicator'
         this.viewer.addEventListener(av.CAMERA_CHANGE_EVENT, this.onCameraChangeBinded);
 
         this.handleButtonUpBinded = this.measureTool.handleButtonUp.bind(this.measureTool);
-        window.addEventListener('mouseup', this.handleButtonUpBinded);
+        this.addWindowEventListener('mouseup', this.handleButtonUpBinded);
     };
 
     proto.createEndpoint = function(index) {
@@ -450,21 +451,24 @@ import { Indicator } from './Indicator'
 
     proto.drawSurface = function(points) {
 
-        var shape = new THREE.Shape();
+        const cg = Autodesk.Viewing.Extensions.CompGeom;
 
-        shape.moveTo( points[0].x, points[0].y );
+        let cset = new cg.ContourSet();
 
-        for (var i = 1; i < points.length; i++) {
-            shape.lineTo( points[i].x, points[i].y);    
-        }
+        cset.addContour(points);
 
-        // Close shape.
-        shape.lineTo( points[0].x, points[0].y);    
+        cset.triangulate();
 
-        var geometry = new THREE.ShapeGeometry( shape );
-        var face = new THREE.Mesh(geometry, this.surfaceColor);
+        if (cset.triangulationFailed)
+            return false;
+
+        let bufferGeometry = cset.toPolygonMesh();
+
+        var face = new THREE.Mesh(bufferGeometry, this.surfaceColor);
 
         this.viewer.impl.addOverlay(this.overlayName, face);
+
+        return true;
     };
 
     proto.drawSegmentAndPush = function(p1, p2, isDashedLine) {
@@ -504,10 +508,12 @@ import { Indicator } from './Indicator'
                 points.push(p2);
             }
             
-            if (MeasureCommon.isPolygonSimple(points) && this.measurement.area !== 0) {
-                this.drawSurface(points);    
-                this.showAreaLabel(MeasureCommon.getPolygonVisualCenter(points));
-                this.updateArea();
+            if (this.measurement.area !== 0) {
+                //Draw surface will return false if it failed to triangulate the polygon (e.g. it has self-intersections)
+                if (this.drawSurface(points)) {
+                    this.showAreaLabel(getPolygonVisualCenter(points));
+                    this.updateArea();
+                }
             }
         }        
     };
@@ -714,10 +720,11 @@ import { Indicator } from './Indicator'
         
         setVisibilityMeasurementLabelText(label, item === this.lines.xyz);
 
+        const _document = this.getDocument();
         // Override main label when displaying only an axis label (X, Y or Z)
         if (item.axis) {
             label.className = item.className;
-            var axisIcon = document.createElement('div');
+            var axisIcon = _document.createElement('div');
             axisIcon.className = 'measure-label-axis-icon ' + item.iconText;
             axisIcon.innerText = item.iconText;
             label.insertBefore(axisIcon, label.firstChild);
@@ -1102,7 +1109,7 @@ import { Indicator } from './Indicator'
         }
 
         this.viewer.removeEventListener(av.CAMERA_CHANGE_EVENT, this.onCameraChangeBinded);
-        window.removeEventListener('mouseup', this.handleButtonUpBinded);
+        this.removeWindowEventListener('mouseup', this.handleButtonUpBinded);
     };
 
     proto.clearXYZLine = function() {
@@ -1116,10 +1123,8 @@ import { Indicator } from './Indicator'
     // Update scale for vertex, edge, line and extension dash line
     proto.updateScale = function() {
         var name;
-        
-        MeasureCommon.forAll(this.angleOutline, function(cylinderMesh) {
-            this.setCylinderScale(cylinderMesh);
-        }.bind(this));
+
+        this.angleOutline.forEach(cylinderMesh => this.setCylinderScale(cylinderMesh));
 
         for (name in this.lines) {
             if (this.lines.hasOwnProperty(name)) {
@@ -1170,20 +1175,22 @@ import { Indicator } from './Indicator'
     };
 
     proto.createMeasurementLabel = function() {
-        
-        var label = document.createElement('div');
+      
+        const _document = this.getDocument();
+
+        var label = _document.createElement('div');
         label.className = 'measure-length';
         
-        var spinner = document.createElement('div');
+        var spinner = _document.createElement('div');
         spinner.className = 'measure-fetching-topology';
         spinner.style.display = 'none';
         label.appendChild(spinner);
 
-        var text = document.createElement('div');
+        var text = _document.createElement('div');
         text.className = 'measure-length-text';
         label.appendChild(text);    
 
-        var delta = document.createElement('div');
+        var delta = _document.createElement('div');
         delta.className = 'measure-delta-text';
         label.appendChild(delta);
 
@@ -1229,17 +1236,18 @@ import { Indicator } from './Indicator'
      * which are the 2 mouse clicks for the measurement.
      */
     proto.createSnapResultLabel = function(pointNumber) {
-        
-        var label = document.createElement('div');
+        const _document = this.getDocument();
+
+        var label = _document.createElement('div');
         label.className = 'measure-label';
 
-        var label_icon = document.createElement('div');
+        var label_icon = _document.createElement('div');
         label_icon.className = 'measure-label-icon';
         label.appendChild(label_icon);
 
         if (av.isTouchDevice()) {
             this.initLabelMobileGestures(label, pointNumber, this.measureTool);
-            var hitArea = document.createElement('div');
+            var hitArea = _document.createElement('div');
             hitArea.className = 'measure-label-hit-area';
             label.appendChild(hitArea);                      
         } 
@@ -1300,7 +1308,8 @@ import { Indicator } from './Indicator'
     };
 
     proto.createSelectionArea = function() {
-        var selectionArea = document.createElement('div');
+        const _document = this.getDocument();
+        var selectionArea = _document.createElement('div');
         selectionArea.id = 'measurement-selection-area-' + this.measurement.id;
         this.viewer.container.appendChild(selectionArea);
         selectionArea.className = 'measure-selection-area';
@@ -1348,12 +1357,13 @@ import { Indicator } from './Indicator'
     };
 
     proto.clearSelectionAreas = function() {
+        const _document = this.getDocument();
         this.segments.forEach(function(item) 
         {  
             if (item.selectionArea) {
                 item.selectionArea.removeEventListener('mousewheel', this.viewer.toolController.mousewheel);
                 item.selectionArea.removeEventListener('click', this.onSelectionAreaClickedBinded);
-                var element = document.getElementById('measurement-selection-area-' + this.measurement.id);
+                var element = _document.getElementById('measurement-selection-area-' + this.measurement.id);
                 if (element) {
                     element.parentNode.removeChild(element);
                 }

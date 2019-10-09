@@ -26,7 +26,7 @@ import * as MarkupEvents from './MarkupEvents'
      * - setMetadata()
      *
      * A good reference is the rectangle markup implementation available in
-     * [MarkupRectangle.js]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupRectangle}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupRectangle|MarkupRectangle}.
      *
      * @tutorial feature_markup
      * @constructor
@@ -43,6 +43,7 @@ import * as MarkupEvents from './MarkupEvents'
         this.type = "";
         this.editor = editor;
         this.viewer = editor.viewer;
+        this.setGlobalManager(this.viewer.globalManager);
         this.position = {x: 0, y: 0};
         this.size = {x:0, y:0};
         this.rotation = 0;
@@ -57,9 +58,15 @@ import * as MarkupEvents from './MarkupEvents'
         this.highlighted = false;
         this.selected = false;
 
+        // bind to this to pass this.globalManager
+        this.checkLineSegment = checkLineSegment.bind(this);
+        this.checkPolygon = checkPolygon.bind(this);
+        this.renderToCanvasX = renderToCanvas.bind(this);
+
         addTraitEventDispatcher(this);
     }
 
+    av.GlobalManagerMixin.call(Markup.prototype);
     var proto = Markup.prototype;
 
     proto.destroy = function () {
@@ -125,6 +132,13 @@ import * as MarkupEvents from './MarkupEvents'
             // Is it an html node?
             if (member.nodeType) {
                 clone[name] = member.cloneNode(true);
+                continue;
+            }
+
+            // Is it the globalManager?
+            if (member instanceof av.GlobalManager) {
+                av.GlobalManagerMixin.call(clone);
+                clone.setGlobalManager(member);
                 continue;
             }
 
@@ -271,7 +285,7 @@ import * as MarkupEvents from './MarkupEvents'
      * Used internally to get the markup's position in browser pixel space.<br>
      * Notice that (0,0) is top left.<br>
      * See also
-     * [getClientSize()]{@link Autodesk.Viewing.Extensions.Markups.Core.Markup#getClientSize}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.Markup#getClientSize|getClientSize()}.
      * @returns {*}
      */
     proto.getClientPosition = function() {
@@ -283,7 +297,7 @@ import * as MarkupEvents from './MarkupEvents'
     /**
      * Used internally to get the markup's bounding rect in browser pixel space.<br>
      * See also
-     * [getClientPosition()]{@link Autodesk.Viewing.Extensions.Markups.Core.Markup#getClientPosition}.
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.Markup#getClientPosition|getClientPosition()}.
      * @returns {*}
      */
     proto.getClientSize = function () {
@@ -305,38 +319,9 @@ import * as MarkupEvents from './MarkupEvents'
         }
 
         var parentRect = this.viewer.impl.getCanvasBoundingClientRect();
-        var boundRect, top;
 
-        if (av.isFirefox()) {
-            var getBBox = function(element) {
-
-                var svg = element.ownerSVGElement;
-                var p = svg.createSVGPoint();
-                var bbox = element.getBBox();
-                var matrix = element.getScreenCTM();
-
-                p.x = bbox.x;
-                p.y = bbox.y;
-                var BL = p.matrixTransform(matrix);
-
-                p.x = bbox.x + bbox.width;
-                p.y = bbox.y + bbox.height;
-                var TR = p.matrixTransform(matrix);
-
-                return {
-                    left: BL.x,
-                    top: TR.y,
-                    width: Math.abs(TR.x - BL.x),
-                    height: Math.abs(BL.y - TR.y)
-                };
-            };
-
-            boundRect = getBBox(this.shape.markup);
-            top = parentRect.height - (boundRect.top - parentRect.top);
-        } else {
-            boundRect = this.shape.markup.getBoundingClientRect();
-            top = boundRect.top - parentRect.top;
-        }
+        var boundRect = this.shape.markup.getBoundingClientRect();
+        var top = boundRect.top - parentRect.top;
 
         var strokeWidth = this.style['stroke-width'] || 0;
         var offset = this.editor.sizeFromMarkupsToClient(strokeWidth, 0).x;
@@ -471,17 +456,18 @@ import * as MarkupEvents from './MarkupEvents'
 
         var viewer = this.viewer;
         var polygon = this.generateBoundingPolygon();
+        var self = this;
 
         function checkLineSegmentAux(a, b) {
 
-            var point2d = checkLineSegment(a.x, a.y, b.x, b.y, idTarget);
+            var point2d = self.checkLineSegment(a.x, a.y, b.x, b.y, idTarget);
             var point3d = point2d && viewer.clientToWorld(point2d.x, point2d.y);
             return point3d && point3d.point;
         }
 
         function checkPolygonAux(polygon) {
 
-            var point2d = checkPolygon(polygon, idTarget);
+            var point2d = self.checkPolygon(polygon, idTarget);
             var point3d = point2d && viewer.clientToWorld(point2d.x, point2d.y);
             return point3d && point3d.point;
         }
@@ -591,7 +577,7 @@ import * as MarkupEvents from './MarkupEvents'
     /**
      * Implemented by extending classes.<br>
      * Gets called automatically when
-     * [generateData()]{@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore#generateData}
+     * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore#generateData|generateData()}
      * @returns {null|Element} - Either null (default) or the metadata Svg node
      */
     proto.setMetadata = function() {
@@ -655,7 +641,7 @@ import * as MarkupEvents from './MarkupEvents'
 
     proto.renderToCanvas = function(ctx, viewBox, width, height, callback) {
 
-        renderToCanvas(this.shape, viewBox, width, height, ctx, callback);
+        this.renderToCanvasX(this.shape, viewBox, width, height, ctx, callback);
     };
 
     proto.getPath = function() {

@@ -552,6 +552,13 @@
     padding-bottom: 15px;
 }
 
+.adsk-viewing-viewer .adsk-toolbar-vertical .docking-panel.measure-settings-popup {
+    right: 120%;
+    bottom: unset;
+    height: max-content;
+    width: max-content;
+}
+
 .adsk-viewing-viewer .docking-panel.measure-settings-popup .adsk-lmv-tftable tr.switch-slider-row td {
     width: auto;
     padding-bottom: 0px;
@@ -567,12 +574,18 @@
     top: 15px;
 }
 
-.measure-toolbar-seperator {
+.adsk-toolbar .measure-toolbar-seperator {
     height: 18px;
     width: 1px;
     background-color: #999;
     float: left;
     margin: 16px 5px;
+}
+
+.adsk-toolbar.adsk-toolbar-vertical .measure-toolbar-seperator {
+    height: 1px;
+    width: 18px;
+    margin: 5px 16px;
 }
 
 .adsk-viewing-viewer .measure-selection-area {

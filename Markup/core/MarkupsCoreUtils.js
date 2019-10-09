@@ -17,6 +17,9 @@ import { DomElementStyle } from './DomElementStyle'
     var av = Autodesk.Viewing;
     var avp = Autodesk.Viewing.Private;
 
+    const _gWindow = av.getGlobal();
+    const _gDocument = _gWindow.document;
+
     // Change these constants to alter the default sizes in pixels of strokes and fonts.
     export var MARKUP_DEFAULT_STROKE_WIDTH_IN_PIXELS = 1;
     export var MARKUP_DEFAULT_FONT_WIDTH_IN_PIXELS = 10;
@@ -45,9 +48,10 @@ import { DomElementStyle } from './DomElementStyle'
      */
     export var createSvgElement = function(type) {
 
+        const _document = (this && this.getDocument && this.getDocument()) || _gDocument;
         // See https://developer.mozilla.org/en-US/docs/Web/API/Document/createElementNS
         var namespace = 'http://www.w3.org/2000/svg';
-        return  document.createElementNS(namespace, type);
+        return  _document.createElementNS(namespace, type);
     };
 
     /**
@@ -235,8 +239,10 @@ import { DomElementStyle } from './DomElementStyle'
      */
     export var addSvgMetadata = function(svg ,metadata) {
 
-        var metadataNode = document.createElementNS('http://www.w3.org/2000/svg', 'metadata');
-        var dataVersionNode = document.createElement('markup_document');
+        const _document = (this && this.getDocument && this.getDocument()) || _gDocument;
+
+        var metadataNode = _document.createElementNS('http://www.w3.org/2000/svg', 'metadata');
+        var dataVersionNode = _document.createElement('markup_document');
 
         metadataNode.appendChild(dataVersionNode);
 
@@ -255,8 +261,10 @@ import { DomElementStyle } from './DomElementStyle'
      */
     export var addMarkupMetadata = function(markupNode, metadata) {
 
-        var metadataNode = document.createElementNS('http://www.w3.org/2000/svg', 'metadata');
-        var dataVersionNode = document.createElement('markup_element');
+        const _document = (this && this.getDocument && this.getDocument()) || _gDocument;
+
+        var metadataNode = _document.createElementNS('http://www.w3.org/2000/svg', 'metadata');
+        var dataVersionNode = _document.createElement('markup_element');
 
         metadataNode.appendChild(dataVersionNode);
         for (var key in metadata) {
@@ -644,7 +652,8 @@ import { DomElementStyle } from './DomElementStyle'
         }
 
         // TODO: Find or ask for a better way to restore this buttons.
-        var anim = document.getElementsByClassName('toolbar-animation-subtoolbar');
+        const _document = viewer.getDocument();
+        var anim = _document.getElementsByClassName('toolbar-animation-subtoolbar');
 
         if (anim.length > 0) {
             anim[0].style.display = '';
@@ -675,8 +684,9 @@ import { DomElementStyle } from './DomElementStyle'
             
         }
 
+        const _document = viewer.getDocument();
         // TODO: Find or ask for a better way to hide this buttons.
-        var anim = document.getElementsByClassName('toolbar-animation-subtoolbar');
+        var anim = _document.getElementsByClassName('toolbar-animation-subtoolbar');
 
         if (anim.length > 0) {
             anim[0].style.display = 'none';
@@ -965,7 +975,8 @@ import { DomElementStyle } from './DomElementStyle'
      */
     export var checkLineSegment = function(x0, y0, x1, y1, idTarget) {
 
-        var deviceRatio = window.devicePixelRatio || 1;
+        const _window = (this && this.getWindow && this.getWindow()) || _gWindow;
+        var deviceRatio = _window.devicePixelRatio || 1;
 
         x0 *= deviceRatio;
         y0 *= deviceRatio;
@@ -1071,7 +1082,8 @@ import { DomElementStyle } from './DomElementStyle'
             return null;
         }
 
-        var deviceRatio = window.devicePixelRatio || 1;
+        const _window = (this && this.getWindow && this.getWindow()) || _gWindow;
+        var deviceRatio = _window.devicePixelRatio || 1;
 
         var idTargetWidth = idTarget.width;
         var idTargetHeight = idTarget.height;
@@ -1213,11 +1225,12 @@ import { DomElementStyle } from './DomElementStyle'
      */
     export var createStyleSheet = function() {
 
-        var style = document.createElement("style");
+        const _document = (this && this.getDocument && this.getDocument()) || _gDocument;
+        var style = _document.createElement("style");
 
         // This is WebKit hack.
-        style.appendChild(document.createTextNode(""));
-        document.head.appendChild(style);
+        style.appendChild(_document.createTextNode(""));
+        _document.head.appendChild(style);
 
         return style.sheet;
     };
@@ -1265,8 +1278,9 @@ import { DomElementStyle } from './DomElementStyle'
             .setAttribute('visibility','hidden')
             .getStyleString();
 
+        const _document = (this && this.getDocument && this.getDocument()) || _gDocument;
         // Create measure div.
-        var measure = document.createElement('div');
+        var measure = _document.createElement('div');
 
         measure.setAttribute('style', measureStyle);
         editor.viewer.container.appendChild(measure);
@@ -1355,8 +1369,10 @@ import { DomElementStyle } from './DomElementStyle'
         // Adding the markup itself to the temp SVG
         tmpSvg.appendChild(markupGroup);
         
+        const _window = (this && this.getWindow && this.getWindow()) || _gWindow;
+        const _document = (this && this.getDocument && this.getDocument()) || _gDocument;
         // Get the SVG as string
-        var temp = document.createElement('div');
+        var temp = _document.createElement('div');
         var node = tmpSvg.cloneNode(true);
         temp.appendChild(node);
         var data = temp.innerHTML;
@@ -1383,7 +1399,7 @@ import { DomElementStyle } from './DomElementStyle'
                 renderWithCanvg();
             };
 
-            img.src = 'data:image/svg+xml;base64,' + window.btoa(unescape( encodeURIComponent( data )));
+            img.src = 'data:image/svg+xml;base64,' + _window.btoa(unescape( encodeURIComponent( data )));
         }
     };
 

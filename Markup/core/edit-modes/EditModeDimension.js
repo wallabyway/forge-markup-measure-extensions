@@ -47,7 +47,7 @@ import { measureTextLines, radiansToDegrees } from '../MarkupsCoreUtils'
         this.sharedMeasureConfig = measureExt.sharedMeasureConfig;
         
         // If PDF, force calibration
-        if ((measureExt.forceCalibrate || viewer.model.getData().isLeaflet) && !measureExt.calibrationTool.isCalibrated()) {
+        if ((measureExt.forceCalibrate || viewer.model.getData().isLeaflet || viewer.model.getData().isPdf) && !measureExt.calibrationTool.isCalibrated()) {
             measureExt.openCalibrationRequiredDialog('dimension');
             abortDimensionMarkup();
         }

@@ -192,7 +192,8 @@ import CSS from './MarkupsGui.css' // IMPORTANT!!
             '</div>'
         ].join('');
 
-        this.domRoot = document.createElement('div');
+        const _document = this.getDocument();
+        this.domRoot = _document.createElement('div');
         this.domRoot.className = 'lmv-markup-gui-toolbar';
         this.domRoot.innerHTML = html;
 
@@ -365,7 +366,8 @@ import CSS from './MarkupsGui.css' // IMPORTANT!!
         var valueType = typeof values[0].value;
 
         // TODO: Build specialized controls for each style-attribute
-        var domElem = document.createElement('div');
+        const _document = this.getDocument();
+        var domElem = _document.createElement('div');
         var html = [
             '<span>',key,'</span>',
             '<select class="lmv-markup-gui-style-select" style-key="', key, '" value-type="', valueType,'">',

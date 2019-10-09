@@ -1,6 +1,6 @@
 'use strict';
 
-const ResizeObserver = require('../../../../thirdparty/resize-observer-polyfill/ResizeObserver.min.js'); // Required for Markup Text Input
+const ResizeObserver = require('../../../thirdparty/resize-observer-polyfill/ResizeObserver.min.js'); // Required for Markup Text Input
 import { autosize } from './EditorTextAutosize'
 import { addTraitEventDispatcher } from '../MarkupsCoreUtils'
 import { cloneStyle } from '../StyleUtils'

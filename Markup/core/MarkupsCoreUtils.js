@@ -1,4 +1,4 @@
-const canvg = require('../../../thirdparty/canvg/canvg.js'); // Required for Markup Thumbnails
+const canvg = require('../../thirdparty/canvg/canvg.js'); // Required for Markup Thumbnails
 import * as MarkupType from '../core/MarkupTypes'
 import { CreateArrow } from './edit-actions/CreateArrow'
 import { CreateRectangle } from './edit-actions/CreateRectangle'

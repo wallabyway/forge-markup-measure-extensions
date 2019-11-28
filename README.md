@@ -5,6 +5,12 @@ This is a public 'mirror' version of forge viewer markup and measure extensions
 **Motivation:**
 Forge customers want to modify existing markup and measure tools.
 
+#### Customization blog posts:
+
+- for measure tool (save/restore): https://forge.autodesk.com/blog/area-planning-tool-forge-viewer-and-mysql
+- for markup tool ("stamp it"): https://forge.autodesk.com/blog/fast-pdf-viewingmarkup-inside-forge-viewer
+- for 3d push-pins (webgl shader): https://forge.autodesk.com/blog/3d-markup-icons-and-info-card
+
 ## Setup
 
 1. install cmd line...

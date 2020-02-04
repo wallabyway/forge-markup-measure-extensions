@@ -484,6 +484,49 @@ import { getPolygonVisualCenter } from "./PolygonCentroid";
         }
     };
 
+
+    proto.renderAreaMeasurementFromPoints = function(pickPositions) {
+        let p1, p2;
+        let firstPoint;
+
+        const points = [];
+
+        const keys = Object.keys(pickPositions);
+
+        for (var i = 0; i < keys.length - 1; i++) {
+            const key = parseFloat(keys[i]);
+            const position1 = pickPositions[key];
+            const position2 = pickPositions[key+1];
+
+            if (i === 0) {
+                firstPoint = new THREE.Vector3(position1.x, position1.y, position1.z);
+            }
+
+            p1 = new THREE.Vector3(position1.x, position1.y, position1.z);
+            p2 = new THREE.Vector3(position2.x, position2.y, position2.z);
+
+            this.drawSegmentAndPush(p1, p2);
+            points.push(p1);
+        }
+
+        if (keys.length > 2) {
+            // Draw last line
+            this.drawSegmentAndPush(firstPoint, p2, !this.measurement.closedArea);
+            
+            if(!MeasureCommon.isEqualVectors(firstPoint,p2,MeasureCommon.EPSILON)){
+                points.push(p2);
+            }
+            
+            if (this.measurement.area !== 0) {
+                //Draw surface will return false if it failed to triangulate the polygon (e.g. it has self-intersections)
+                if (this.drawSurface(points)) {
+                    this.showAreaLabel(getPolygonVisualCenter(points));
+                    this.updateArea();
+                }
+            }
+        }        
+    };
+
     proto.renderAreaMeasurement = function(picks) {
 
         var count = this.measurement.countPicks();
@@ -677,6 +720,48 @@ import { getPolygonVisualCenter } from "./PolygonCentroid";
         midPoint.add(dir);
     };
 
+    proto.renderAngleMeasurementFromPoints = function(pickPositions) {
+        var p1, p2;
+
+        var points = [];
+        
+        const keys = Object.keys(pickPositions);
+        for (var i = 0; i < keys.length - 1; i++) {
+            const key = parseFloat(keys[i]);
+            const position1 = pickPositions[key];
+            const position2 = pickPositions[key+1];
+
+            p1 = new THREE.Vector3(position1.x, position1.y, position1.z);
+            p2 = new THREE.Vector3(position2.x, position2.y, position2.z);
+
+
+            this.drawSegmentAndPush(p1, p2);
+
+            if (p1) {
+                points.push(p1);    
+            }
+        }
+
+        if (p2) {
+            points.push(p2);
+        }
+        
+        if (points.length === 3 && this.measurement.angle) {
+            var n = new THREE.Vector3();
+            var v1 = new THREE.Vector3();
+            var v2 = new THREE.Vector3();
+            v1.subVectors(points[0], points[1]);
+            v2.subVectors(points[1], points[2]);
+            n.crossVectors(v1, v2);
+            n.normalize();
+
+            var midPoint = new THREE.Vector3();
+            this.drawAngle(points[1], points[0], points[2], n, this.measurement.angle, midPoint);
+            this.showAngleLabel(midPoint);
+            this.updateAngle();
+        }        
+    };
+
     proto.renderAngleMeasurement = function(picks) {
 
         var count = this.measurement.countPicks();
@@ -739,70 +824,100 @@ import { getPolygonVisualCenter } from "./PolygonCentroid";
         return label;
     };
 
+    proto.updateLine = function(item, x1, y1, z1, x2, y2, z2, showAxis) {
+        var line = item.line,
+            label = item.label,
+            p1 = new THREE.Vector3(x1, y1, z1),
+            p2 = new THREE.Vector3(x2, y2, z2);
+
+        // Swap points if needed to have consistent axis directions.
+        var tmpVec;
+        if (item === this.lines.x && p2.x > p1.x) {
+            tmpVec = p1.clone();
+            p1 = p2.clone();
+            p2 = tmpVec.clone();
+        } 
+        else if (item === this.lines.y && p2.y > p1.y) {
+            tmpVec = p1.clone();
+            p1 = p2.clone();
+            p2 = tmpVec.clone();
+        } 
+        else if (item === this.lines.z && p2.z > p1.z) {
+            tmpVec = p1.clone();
+            p1 = p2.clone();
+            p2 = tmpVec.clone();
+        }
+
+        item.line = null;            
+
+        if (!label) {
+            label = this.createDistanceLabel(item);
+        }
+        else {
+            this.hideLabel(label);
+        }
+        
+        if (((this.isLeaflet && item !== this.lines.z) || (p1.distanceTo(p2) >= MeasureCommon.EPSILON)) && showAxis) {
+
+            item.p1 = p1;
+            item.p2 = p2;
+
+            if (item === this.lines.xyz) {
+                this.drawXYZLine(item);
+                this.showLabel(label);
+                this.updateDistance();
+            }
+            else {
+                line = item.line = this.drawLineSegment(p1, p2, _axisLineWidth, item.material);
+                var show = !this.simple && this.showMeasureResult;
+
+                line.visible = show;
+                item.visible = show;
+
+                if (show) {
+                    this.showLabel(label);
+                }
+                else {
+                    this.hideLabel(label);
+                }
+            }
+        }
+    }
+
+    // Draw distance measurement
+    proto.renderDistanceMeasurementFromPoints = function(p1, p2) {
+
+        this.updateLine(this.lines.xyz, p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, true);
+
+        var up = this.viewer.navigation.getAlignedUpVector(),
+            x = Math.abs(up.x),
+            y = Math.abs(up.y),
+            z = Math.abs(up.z);
+
+        var showAxis = false;
+
+        if (z > x && z > y) { // z up
+            this.updateLine(this.lines.x, p1.x, p1.y, p1.z, p2.x, p1.y, p1.z, showAxis);
+            this.updateLine(this.lines.y, p2.x, p1.y, p1.z, p2.x, p2.y, p1.z, showAxis);
+            this.updateLine(this.lines.z, p2.x, p2.y, p1.z, p2.x, p2.y, p2.z, showAxis);
+
+        } else if (y > x && y > z) { // y up
+            this.updateLine(this.lines.x, p1.x, p1.y, p1.z, p2.x, p1.y, p1.z, showAxis);
+            this.updateLine(this.lines.z, p2.x, p1.y, p1.z, p2.x, p1.y, p2.z, showAxis);
+            this.updateLine(this.lines.y, p2.x, p1.y, p2.z, p2.x, p2.y, p2.z, showAxis);
+
+        } else { // x up - do we ever see this?
+            this.updateLine(this.lines.y, p1.x, p1.y, p1.z, p1.x, p2.y, p1.z, showAxis);
+            this.updateLine(this.lines.z, p1.x, p2.y, p1.z, p1.x, p2.y, p2.z, showAxis);
+            this.updateLine(this.lines.x, p1.x, p2.y, p2.z, p2.x, p2.y, p2.z, showAxis);
+        }
+
+    };
+
     // Draw distance measurement
     proto.renderDistanceMeasurement = function(p1, p2)
     {
         var self = this;
-
-        function updateLine(item, x1, y1, z1, x2, y2, z2, showAxis) {
-            var line = item.line,
-                label = item.label,
-                p1 = new THREE.Vector3(x1, y1, z1),
-                p2 = new THREE.Vector3(x2, y2, z2);
-
-            // Swap points if needed to have consistent axis directions.
-            var tmpVec;
-            if (item === self.lines.x && p2.x > p1.x) {
-                tmpVec = p1.clone();
-                p1 = p2.clone();
-                p2 = tmpVec.clone();
-            } 
-            else if (item === self.lines.y && p2.y > p1.y) {
-                tmpVec = p1.clone();
-                p1 = p2.clone();
-                p2 = tmpVec.clone();
-            } 
-            else if (item === self.lines.z && p2.z > p1.z) {
-                tmpVec = p1.clone();
-                p1 = p2.clone();
-                p2 = tmpVec.clone();
-            }
-
-            item.line = null;            
-
-            if (!label) {
-                label = self.createDistanceLabel(item);
-            }
-            else {
-                self.hideLabel(label);
-            }
-            
-            if (((self.isLeaflet && item !== self.lines.z) || (p1.distanceTo(p2) >= MeasureCommon.EPSILON)) && showAxis) {
-
-                item.p1 = p1;
-                item.p2 = p2;
-
-                if (item === self.lines.xyz) {
-                    self.drawXYZLine(item);
-                    self.showLabel(label);
-                    self.updateDistance();
-                }
-                else {
-                    line = item.line = self.drawLineSegment(p1, p2, _axisLineWidth, item.material);
-                    var show = !self.simple && self.showMeasureResult;
-
-                    line.visible = show;
-                    item.visible = show;
-
-                    if (show) {
-                        self.showLabel(label);
-                    }
-                    else {
-                        self.hideLabel(label);
-                    }
-                }
-            }
-        }
 
         // If the line aligns with one of axis, then don't show axis
         function displayAxis(p1, p2) {
@@ -812,7 +927,7 @@ import { getPolygonVisualCenter } from "./PolygonCentroid";
             return !MeasureCommon.isParallel(self.tmpVector, self.xAxis) && !MeasureCommon.isParallel(self.tmpVector, self.yAxis) && !MeasureCommon.isParallel(self.tmpVector, self.zAxis);
         }
 
-        updateLine(this.lines.xyz, p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, true);
+        this.updateLine(this.lines.xyz, p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, true);
 
         var up = this.viewer.navigation.getAlignedUpVector(),
             x = Math.abs(up.x),
@@ -822,19 +937,19 @@ import { getPolygonVisualCenter } from "./PolygonCentroid";
         var showAxis = displayAxis(p1, p2);
 
         if (z > x && z > y) { // z up
-            updateLine(this.lines.x, p1.x, p1.y, p1.z, p2.x, p1.y, p1.z, showAxis);
-            updateLine(this.lines.y, p2.x, p1.y, p1.z, p2.x, p2.y, p1.z, showAxis);
-            updateLine(this.lines.z, p2.x, p2.y, p1.z, p2.x, p2.y, p2.z, showAxis);
+            this.updateLine(this.lines.x, p1.x, p1.y, p1.z, p2.x, p1.y, p1.z, showAxis);
+            this.updateLine(this.lines.y, p2.x, p1.y, p1.z, p2.x, p2.y, p1.z, showAxis);
+            this.updateLine(this.lines.z, p2.x, p2.y, p1.z, p2.x, p2.y, p2.z, showAxis);
 
         } else if (y > x && y > z) { // y up
-            updateLine(this.lines.x, p1.x, p1.y, p1.z, p2.x, p1.y, p1.z, showAxis);
-            updateLine(this.lines.z, p2.x, p1.y, p1.z, p2.x, p1.y, p2.z, showAxis);
-            updateLine(this.lines.y, p2.x, p1.y, p2.z, p2.x, p2.y, p2.z, showAxis);
+            this.updateLine(this.lines.x, p1.x, p1.y, p1.z, p2.x, p1.y, p1.z, showAxis);
+            this.updateLine(this.lines.z, p2.x, p1.y, p1.z, p2.x, p1.y, p2.z, showAxis);
+            this.updateLine(this.lines.y, p2.x, p1.y, p2.z, p2.x, p2.y, p2.z, showAxis);
 
         } else { // x up - do we ever see this?
-            updateLine(this.lines.y, p1.x, p1.y, p1.z, p1.x, p2.y, p1.z, showAxis);
-            updateLine(this.lines.z, p1.x, p2.y, p1.z, p1.x, p2.y, p2.z, showAxis);
-            updateLine(this.lines.x, p1.x, p2.y, p2.z, p2.x, p2.y, p2.z, showAxis);
+            this.updateLine(this.lines.y, p1.x, p1.y, p1.z, p1.x, p2.y, p1.z, showAxis);
+            this.updateLine(this.lines.z, p1.x, p2.y, p1.z, p1.x, p2.y, p2.z, showAxis);
+            this.updateLine(this.lines.x, p1.x, p2.y, p2.z, p2.x, p2.y, p2.z, showAxis);
         }
 
     };
@@ -1391,6 +1506,12 @@ import { getPolygonVisualCenter } from "./PolygonCentroid";
 
         this.updateSelectionArea();
     };
+
+    proto.renderFromPoints = function(points, showMeasureResult) {
+        Indicator.prototype.renderFromPoints.call(this, points, showMeasureResult);
+
+        this.updateSelectionArea();
+    }
 
     proto.onCameraChange = function() {
         this.redrawDashedLine();

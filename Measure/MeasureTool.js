@@ -49,10 +49,11 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
     var _cursorPosition = null;
 
     var _closeAreaSnapRange = 25;
-    var _preMeasureIsolatedNodes = [];
-    var _preMeasureHiddenNodes = [];
+    var _preMeasureState = null;
 
     var _measurementType = MeasureCommon.MeasurementTypes.MEASUREMENT_DISTANCE;
+
+    var _sessionMeasurements = null;
 
     function getActivePick()
     {   
@@ -130,6 +131,15 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         return _currentMeasurement && (_activePoint === _currentMeasurement.getMaxNumberOfPicks() + 1);
     };
 
+    this.setSessionMeasurements = function(measurementList) {
+        // Store the clone of the measurementList
+        _sessionMeasurements = JSON.parse(JSON.stringify(measurementList));
+    };
+
+    this.getSessionMeasurements = function() {
+        return JSON.parse(JSON.stringify(_sessionMeasurements));
+    };
+
     this.register = function()
     {
 
@@ -172,9 +182,12 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         return _activePoint;
     };
 
+    this.getMeasurementsManager = function() {
+        return _measurementsManager;
+    }
+
 
     this.startNewMeasurement = function() {
-
         _currentMeasurement = _measurementsManager.createMeasurement(_measurementType);
         _currentMeasurement.attachIndicator(_viewer, this, MeasureToolIndicator);
 
@@ -201,17 +214,24 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         this.editByDrag = false;
 
         _viewer.impl.pauseHighlight(true);
-        _preMeasureIsolatedNodes = _viewer.getIsolatedNodes();
-        _preMeasureHiddenNodes = _viewer.getHiddenNodes();
 
         _viewer.clearSelection();
+        _preMeasureState = _viewer.getState({objectSet: true});
+        
         _viewer.toolController.activateTool("snapper");
         _viewer.toolController.activateTool("magnifyingGlass");
  
        this.onMeasurementChangedBinded = this.onMeasurementChanged.bind(this);
        _viewer.addEventListener(MeasureCommon.Events.MEASUREMENT_CHANGED_EVENT, this.onMeasurementChangedBinded);
        _viewer.addEventListener(av.CAMERA_CHANGE_EVENT, this.onCameraChange);
-       _viewer.addEventListener(av.ISOLATE_EVENT, this.onIsolate);
+       _viewer.addEventListener(av.SHOW_ALL_EVENT, this.onShowAllEvent);
+
+       // Set the stored session measurements only if the preference is enabled
+       const restoreSessionMeasurements = _viewer.prefs.get(av.Private.Prefs.RESTORE_SESSION_MEASUREMENTS);
+       if (restoreSessionMeasurements) {
+           const sessionMeasurements = this.getSessionMeasurements();
+           this.setMeasurements(sessionMeasurements);
+       }
     };
 
     this.deactivate = function()
@@ -219,7 +239,17 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         if (!_active)
             return;
 
+        // Store the session measurements only if the preference is enabled
+        const restoreSessionMeasurements = _viewer.prefs.get(av.Private.Prefs.RESTORE_SESSION_MEASUREMENTS);
+        if (restoreSessionMeasurements) {
+            const measurementList = this.getMeasurementList();
+            this.setSessionMeasurements(measurementList);
+        }
+
         _active = false;
+        
+        this.clearIsolate(); // restore initial isolation
+        _preMeasureState = null;
 
         while (Object.keys(_measurementsManager.measurementsList).length > 0) {
             _currentMeasurement = _measurementsManager.measurementsList[Object.keys(_measurementsManager.measurementsList)[0]];
@@ -235,13 +265,11 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         _viewer.toolController.deactivateTool("magnifyingGlass");
 
         _viewer.impl.pauseHighlight(false);
-        _preMeasureIsolatedNodes = [];
-        _preMeasureHiddenNodes = [];
 
         _measurementsManager.destroy();
         _viewer.removeEventListener(av.CAMERA_CHANGE_EVENT, this.onCameraChange);
         _viewer.removeEventListener(MeasureCommon.Events.MEASUREMENT_CHANGED_EVENT, this.onMeasurementChangedBinded);
-        _viewer.removeEventListener(av.ISOLATE_EVENT, this.onIsolate);
+        _viewer.removeEventListener(av.SHOW_ALL_EVENT, this.onShowAllEvent);
     };
 
     this.update = function()
@@ -290,6 +318,35 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
                 }
             }
         }
+    };
+
+    /**
+     * Prepare the measurement snap result information into a serializable object.
+     * @param {*} measurement 
+     */
+    function getPickData(measurement) {
+        measurement = measurement || _currentMeasurement;
+        const picks = measurement.clonePicks();
+        const picksData = [];
+        for (let i = 0; i < picks.length; i++) {
+            const pick = picks[i];
+
+            let pickPoint = MeasureCommon.getSnapResultPosition(pick, _viewer);
+            const model = pick.hasOwnProperty('modelId') && pick.modelId ? _viewer.impl.findModel(pick.modelId) : _viewer.model;
+            if (model) {
+                const modelData = model.getData();
+                pickPoint = modelData && modelData.hasOwnProperty('globalOffset') ? pickPoint.clone().sub(modelData.globalOffset) : pickPoint.clone();
+            }
+
+            const pickData = {
+                intersection: JSON.parse(JSON.stringify(pickPoint)),
+                modelId: pick.modelId,
+                viewportIndex2d: pick.viewportIndex2d
+            };
+            picksData.push(pickData);
+        }
+
+        return picksData;
     };
 
     this.getDistanceXYZ = function(measurement) {
@@ -374,10 +431,100 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
     function render(showResult) {
 
         var hasResult = _currentMeasurement.computeResult(_currentMeasurement.picks, _viewer, _snapper);
-
         _currentMeasurement.indicator.render(_currentMeasurement.picks, _consumeSingleClick || !!showResult);
 
         return hasResult;
+    }
+
+    /**
+     * Sets existing measurements from the passed in measurement list. Reference getMeasurementList.
+     * 
+     * @param {Object[]} measurementList - measurements to set.
+     */
+    this.setMeasurements = function(measurementList) {
+        if (!measurementList) return; // Only set the a measurementList is passed in.
+        measurementList = !Array.isArray(measurementList) ? [measurementList] : measurementList;
+
+        if (measurementList.length === 0) return;
+
+        function getMeasureType(measureData) {
+            let measurementType;
+            switch (measureData.type) {
+                case 'Distance':
+                    measurementType = MeasureCommon.MeasurementTypes.MEASUREMENT_DISTANCE;
+                    break;
+                case 'Angle':
+                    measurementType = MeasureCommon.MeasurementTypes.MEASUREMENT_ANGLE;
+                    break;
+                case 'Area':
+                    measurementType = MeasureCommon.MeasurementTypes.MEASUREMENT_AREA;
+                    break;
+                default:
+                    return;
+            }
+            return measurementType;
+        }
+
+        // Restore the supplied measurementList.
+        for (let i = 0; i < measurementList.length; i++) {
+            const measureData = measurementList[i];
+
+            const unitType = measureData.unitType;
+            const precision = measureData.precision;
+            const measurementType = getMeasureType(measureData);
+            if (!measurementType) continue;
+
+            this.setUnits(unitType);
+            this.setPrecision(precision);
+
+            const attachIndicatorCb = (measurement) => {
+                _currentMeasurement = measurement; // _currentMeasurement needs to be set for the onMeasurementChanged to work
+                measurement.attachIndicator(_viewer, this, MeasureToolIndicator);
+
+                if (_onIndicatorCreatedCB instanceof Function) {
+                    _onIndicatorCreatedCB();
+                    _onIndicatorCreatedCB = null;
+                }
+
+                enableMeasurementsTouchEvents(false);
+            };
+
+            const initPicksCb = () => {
+                const restoredMeasurements = _measurementsManager.getRestoredMeasurementData();
+                const points = restoredMeasurements[_currentMeasurement.id];
+                _activePoint = points.length;
+            };
+
+            measureData.sharedUnits = _sharedMeasureConfig.units;
+            measureData.sharedCalibrationFactor = _sharedMeasureConfig.calibrationFactor;
+
+            _measurementsManager.createMeasurementFromData(
+                measureData,
+                measurementType,
+                attachIndicatorCb,
+                initPicksCb
+            );
+        }
+
+        this.deselectAllMeasurements();
+    };
+
+    function getMeasurementType(measurement) {
+        measurement = measurement || _currentMeasurement;
+        const types = MeasureCommon.MeasurementTypes;
+        const type = measurement.measurementType;
+        switch (type) {
+            case types.MEASUREMENT_DISTANCE:
+                return 'Distance';
+            case types.MEASUREMENT_ANGLE:
+                return 'Angle';
+            case types.MEASUREMENT_AREA:
+                return 'Area';
+            case types.CALIBRATION:
+                return 'Calibration';
+            default:
+                return;
+        }
     }
 
     /**
@@ -393,7 +540,8 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         _sharedMeasureConfig.precision = precision || _sharedMeasureConfig.precision;
 
         var geomTypes = ['Vertex', 'Edge', 'Face', 'Circular Arc', 'Curved Edge', 'Curved Face'];
-
+        var picks = getPickData();
+        var type = getMeasurementType();
         var measurement = {
             from: geomTypes[_currentMeasurement.getGeometry(1).type],
             to: geomTypes[_currentMeasurement.getGeometry(2).type],
@@ -404,10 +552,20 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
             angle: this.getAngle(),
             area: this.getArea(),
             unitType: _sharedMeasureConfig.units,
-            precision: _sharedMeasureConfig.precision
+            precision: _sharedMeasureConfig.precision,
+            picks,
+            type
         };
 
         return measurement;
+    };
+
+    /**
+     * @returns {SnapResult[]} list of points for the selected measurement.
+     */
+    this.getMeasurementPoints = function() {
+
+        return _currentMeasurement.clonePicks();
     };
 
     /**
@@ -425,7 +583,8 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
 
         for(let i = 0; i < measurementList.length; i++) {
             measurement = _measurementsManager.measurementsList[measurementList[i]];
-            
+            var picks = getPickData(measurement);
+            var type = getMeasurementType(measurement);
             var result = {
               from: geomTypes[measurement.getGeometry(1).type],
               to: geomTypes[measurement.getGeometry(2).type],
@@ -436,7 +595,9 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
               angle: this.getAngle(measurement),
               area: this.getArea(measurement),
               unitType: unitType || _sharedMeasureConfig.units,
-              precision: precision || _sharedMeasureConfig.precision
+              precision: precision || _sharedMeasureConfig.precision,
+              picks,
+              type
             }
             list.push(result);
         }
@@ -480,35 +641,64 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
     };
 
     this.isolateMeasurement = function () {
-        if (_currentMeasurement) {
-            var isolationGroup = [];
-        
-            for (var key in _currentMeasurement.picks) {
-                if (_currentMeasurement.picks.hasOwnProperty(key)) {
-                    isolationGroup.push(_currentMeasurement.getPick(key).snapNode);
+
+        if (!_active || !_isolateMeasure) {
+            return;
+        }
+
+        var defaultModelId = _viewer.model.id;
+        var isolationGroups = {};
+
+        for (var key in _measurementsManager.measurementsList) {
+            if (_measurementsManager.measurementsList.hasOwnProperty(key)) {
+
+                var measurement = _measurementsManager.measurementsList[key];
+                for (var key in measurement.picks) {
+                    if (measurement.picks.hasOwnProperty(key)) {
+                        var pick = measurement.getPick(key);
+
+                        var modelId = pick.modelId || defaultModelId;
+                        if (!Array.isArray(isolationGroups[modelId])) {
+                            isolationGroups[modelId] = [];
+                        }
+                        if (isolationGroups[modelId].indexOf(pick.snapNode) == -1) {
+                            isolationGroups[modelId].push(pick.snapNode);
+                        }
+                    }
                 }
+
             }
-            _viewer.removeEventListener(av.ISOLATE_EVENT, this.onIsolate);
-            _viewer.isolate(isolationGroup);
-            _viewer.addEventListener(av.ISOLATE_EVENT, this.onIsolate);
+        }
+    
+
+        // convert to expected format
+        var isolationSet = [];
+        for (var modelId in isolationGroups) {
+            if (isolationGroups.hasOwnProperty(modelId)) {
+
+                var modelInstance = _viewer.impl.findModel(parseInt(modelId));
+                isolationSet.push({
+                    model: modelInstance,
+                    ids: isolationGroups[modelId]
+                });
+            }
+        }
+
+        if (isolationSet.length) {
+            _viewer.impl.visibilityManager.aggregateIsolate(isolationSet);
         }
     };
 
+    // It actually restores the isolation state to the one just before
+    // the measure tool was enabled...
     this.clearIsolate = function() {
-        _viewer.removeEventListener(av.ISOLATE_EVENT, this.onIsolate);
-        _viewer.showAll();
-        _viewer.isolate(_preMeasureIsolatedNodes);
-        _viewer.hide(_preMeasureHiddenNodes);
-        _viewer.addEventListener(av.ISOLATE_EVENT, this.onIsolate);
-
+        if (_preMeasureState) {
+            _viewer.restoreState(_preMeasureState, undefined, true);
+        }
     };
 
-    this.onIsolate = function (event) {
-        // Isolation group is empty. Should enter only when 'Show all objects' is being called.
-        if (!event.nodeIdArray.length) {
-            _preMeasureIsolatedNodes = [];
-            _preMeasureHiddenNodes = [];
-        }
+    this.onShowAllEvent = function (event) {
+        _preMeasureState = null;
     };
 
     this.deselectAllMeasurements = function() {
@@ -606,6 +796,31 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
             this.clearIsolate();    
         }
 
+        if (_currentMeasurement.isRestored) {
+            // populate the existing picks with the new snap result from the snapper
+            _snapper.onMouseMove({x: event.canvasX, y: event.canvasY});
+            const snapResult = _snapper.getSnapResult().clone();
+            const pick = _currentMeasurement.getPick(_activePoint);
+            snapResult.copyTo(pick);
+
+            // Keep track of the pick that was updated.
+            pick.isValid = true;
+
+            // Set isRestored flag back to false if all of the picks have been validated
+            _currentMeasurement.isRestored = !function() {
+                const picks = _currentMeasurement.picks;
+                for (var key in picks) {
+                    if (picks.hasOwnProperty(key)) {
+                        const pick = picks[key];
+                        if (!pick.isValid) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }();
+        }
+
         if(!av.isMobileDevice()) {
             this._handleMouseEvent(event);
         }
@@ -638,16 +853,31 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         _currentMeasurement.indicator.showEndpoints();
         _currentMeasurement.indicator.focusLabels();
 
-        if (_isolateMeasure && _currentMeasurement.isComplete()) {
+        if (_currentMeasurement.isComplete()) {
             this.isolateMeasurement();
         }
     };
+
+    /**
+     * Delete all measurements.
+     */
+    this.deleteMeasurements = function() {
+        const measurements = _measurementsManager.measurementsList;
+        const keys = Object.keys(measurements);
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i];
+            _measurementsManager.currentMeasurement = measurements[key];
+            _currentMeasurement = _measurementsManager.getCurrentMeasurement();
+            this.deleteCurrentMeasurement();
+        }
+    }
 
     this.deleteCurrentMeasurement = function() {
         this.clearCurrentMeasurement();
         this.isEditingEndpoint = false;
         this.editByDrag = false;
         _isDragging = false;
+        this.isolateMeasurement();
     };
 
     this.deleteCurrentPick = function() {
@@ -777,10 +1007,6 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
             // User picked a new point after two points where already set (or none) - Start a new measurement.
             if (this.areAllPicksSet() || isNoPicksSet()) {
                 this.startNewMeasurement();
-                
-                if (_isolateMeasure) { 
-                    this.clearIsolate();
-                }
 
                 _activePoint = 1;
             }

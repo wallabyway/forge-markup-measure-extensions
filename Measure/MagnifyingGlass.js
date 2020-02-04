@@ -66,7 +66,7 @@ export var MagnifyingGlass = function(viewer) {
             var ctx = _magnifyingGlassCanvas.getContext("2d");
             
             // Read the pixels from the frame buffer
-            var gl = _viewer.canvas.getContext("webgl") || _viewer.canvas.getContext("experimental-webgl");         
+            var gl = _viewer.canvas.getContext("webgl2") || _viewer.canvas.getContext("webgl") || _viewer.canvas.getContext("experimental-webgl");         
             gl.readPixels(x, _viewer.canvas.height - y - _imageData.height, _imageData.width, _imageData.height, gl.RGBA, gl.UNSIGNED_BYTE, _imageBuffer);
             // Put the pixel into the magnifying context.
             ctx.putImageData(_imageData, 0, 0);

@@ -212,7 +212,7 @@ import { isTouchDevice } from '../MarkupsCoreUtils'
 
         const _document = this.getDocument();
         // Don't do blur in full screen (IE issue)
-        if (!(av.isIE11 && av.inFullscreen())) {
+        if (!(av.isIE11 && av.inFullscreen(_document))) {
             _document.activeElement && _document.activeElement.blur && _document.activeElement.blur();
         }
 

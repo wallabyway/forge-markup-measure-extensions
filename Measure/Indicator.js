@@ -59,6 +59,26 @@
         return false;
     };
 
+    proto.renderFromPoints = function(points, showMeasureResult) {
+        this.showMeasureResult = showMeasureResult;
+
+        this.clear();
+
+        for (var i = 1; i <= Object.keys(points).length; i++) {
+            const p = points[i];
+            if (!this.endpoints[i]) {
+                this.createEndpoint(i);
+            }
+    
+            this.endpoints[i].position = new THREE.Vector3(p.x, p.y, p.z);
+            this.showClick(i);
+        }
+            
+        this.renderRubberbandFromPoints(points);
+        
+        this.updateLabelsPosition();
+    };
+
     // Renders the measurement and the labels.
     proto.render = function(picks, showMeasureResult) {
 
@@ -310,7 +330,10 @@
 
     proto.renderEndpointGeometry = function(pickNumber) {
         var geometry = MeasureCommon.getSnapResultPosition(this.measurement.getPick(pickNumber), this.viewer);
-        this.endpoints[pickNumber].position = geometry.clone();
+        
+        if (geometry !== null) {
+            this.endpoints[pickNumber].position = geometry.clone();
+        }
     };
 
 
@@ -510,6 +533,28 @@
 
         this.visibleLabels = [];
     };
+
+    proto.renderRubberbandFromPoints = function(points) {
+        switch (this.measurement.measurementType) {
+            case MeasureCommon.MeasurementTypes.MEASUREMENT_DISTANCE:
+                var start = points[1];
+                var end = points[2];
+                
+                if (start && end) {
+                    this.renderDistanceMeasurementFromPoints(start, end);
+                }
+                break;
+
+            case MeasureCommon.MeasurementTypes.MEASUREMENT_ANGLE:
+                this.renderAngleMeasurementFromPoints(points);
+                break;
+
+            case MeasureCommon.MeasurementTypes.MEASUREMENT_AREA:
+                this.renderAreaMeasurementFromPoints(points);
+                break;
+        }
+
+    }
 
     proto.renderRubberband = function(picks) {
 

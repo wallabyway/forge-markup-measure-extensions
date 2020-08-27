@@ -3,21 +3,26 @@
 This is a public 'mirror' version of forge viewer markup and measure extensions.  Use webpack to build these extensions locally, then modify as desired.
 
 **Motivation:**
-Forge customers can customize markup and measure tools, but it's limited without changing the viewer3d.js file.  Instead, they can recreate the markup and measure tools, by using this mirror code and rebuilding their own custom markup and measure tools.
+Forge customers can customize markup and measure tool
 
-
-This is what the current tools (markup and measure) can do:
+Here's a blog post on how to use the built-in features: https://forge.autodesk.com/blog/using-autodeskviewingmarkupscore-extension
 
 ![](https://flint-prodcms-forge.s3.amazonaws.com/prod/s3fs-public/2018-07/prev.gif)
 
 Source: https://forge.autodesk.com/blog/viewing-large-ocrterrain-images-forge-viewer
 
+But these APIs are limited.  Sometimes you have to hack the viewer3d.js file, in order to achieve the behavior you want.  For example, creating an SVG stamp tool (see examples below).  It's not really possible without overriding large amounts of code with prototypes.
+
+Instead, what if you could modify the existing markup and measure extensions, without touching viewer3d.js ?  Well, here's how...
+
+Use this mirror code, to build these extensions seperately.  Then modify the extensions code as you need, seperate from the viewer3d.js file.
+
+
 
 #### Customization blog posts:
 
-- for measure tool (save/restore): https://forge.autodesk.com/blog/area-planning-tool-forge-viewer-and-mysql
-- for markup tool ("stamp it"): https://forge.autodesk.com/blog/fast-pdf-viewingmarkup-inside-forge-viewer
-- for 3d push-pins (webgl shader): https://forge.autodesk.com/blog/3d-markup-icons-and-info-card
+- to save/restore measurements to a database (save/restore): https://forge.autodesk.com/blog/area-planning-tool-forge-viewer-and-mysql
+- create an SVG 'stamp' for markup tool: https://forge.autodesk.com/blog/fast-pdf-viewingmarkup-inside-forge-viewer
 
 ## Setup
 

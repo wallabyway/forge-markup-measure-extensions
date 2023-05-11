@@ -1,14 +1,14 @@
 'use strict';
 
-import { Markup } from './Markup'
-import * as MarkupTypes from './MarkupTypes'
+import { Markup } from './Markup';
+import * as MarkupTypes from './MarkupTypes';
 import { createMarkupTextSvg, createMarkupPathSvg, createMarkupGroupSvg,
     composeRGBAString, setAttributeToMarkupSvg, setMarkupTextSvgTransform,
     updateMarkupTextSvgClipper, updateMarkupTextSvgHitarea, updateMarkupPathSvgHitarea,
     createSvgElement, addMarkupMetadata, radiansToDegrees, createRectanglePath,
-    EDIT_FRAME_DEFAULT_MARGIN } from './MarkupsCoreUtils'
-import { cloneStyle, copyStyle, isStyleEqual } from './StyleUtils'
-import { EditModeCallout } from './edit-modes/EditModeCallout'
+    EDIT_FRAME_DEFAULT_MARGIN } from './MarkupsCoreUtils';
+import { cloneStyle, copyStyle, isStyleEqual } from './StyleUtils';
+import { EditModeCallout } from './edit-modes/EditModeCallout';
 
     // LMV ViewerLMV-2170 [Markup] [PDF] Text markup missing/cutoff for normal sized text.
     // If the font size of an SVG text is too small, the text is not rendered independently of its final screen size.
@@ -161,7 +161,7 @@ import { EditModeCallout } from './edit-modes/EditModeCallout'
         if (this.highlighted && this.highlighted !== this.prevHighlight) {
             var rect = this.rectShape;
             var text = this.textShape;
-            var strokeColor = this.highlighted ? this.highlightColor : composeRGBAString(style['stroke-color'], style['stroke-opacity']);
+            var strokeColor = this.highlightColor;
             setAttributeToMarkupSvg(text, 'fill', strokeColor);
 
             if (this.isFrameUsed) {
@@ -418,5 +418,5 @@ import { EditModeCallout } from './edit-modes/EditModeCallout'
             width: size.x,
             height: size.y,
             margin: margin
-        }
+        };
     };

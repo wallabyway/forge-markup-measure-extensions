@@ -1,7 +1,7 @@
 'use strict';
 
-import { EditAction } from './EditAction'
-import { cloneStyle } from '../StyleUtils'
+import { EditAction } from './EditAction';
+import { cloneStyle } from '../StyleUtils';
 
     /**
      *

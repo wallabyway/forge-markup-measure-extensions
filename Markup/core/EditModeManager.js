@@ -24,9 +24,9 @@ class EditModeManager {
     }
 
     getRegistered() {
-        var ret = {}
+        var ret = {};
         for (var id in _editModes) {
-            if (_editModes.hasOwnProperty(id)) {
+            if (Object.prototype.hasOwnProperty.call(_editModes, id)) {
                 ret[id] = _editModes[id];
             }
         }

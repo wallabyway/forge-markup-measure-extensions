@@ -1,7 +1,7 @@
 'use strict';
 
-import { EditMode } from './EditMode'
-import { simplify } from '../MarkupsCoreUtils'
+import { EditMode } from './EditMode';
+import { simplify } from '../MarkupsCoreUtils';
 
     /**
      * Base class for editing Pen tools (currently freehand and highlighter)
@@ -44,12 +44,10 @@ import { simplify } from '../MarkupsCoreUtils'
      */
     proto.onMouseMove = function(event) {
 
-        EditMode.prototype.onMouseMove.call( this, event );
-
-        var selectedMarkup = this.selectedMarkup;
-        if (!selectedMarkup || !this.creating) {
-            return;
+        if (!EditMode.prototype.onMouseMove.call( this, event )) {
+            return false;
         }
+
 
         var editor = this.editor;
         var mousePosition = editor.getMousePosition();
@@ -78,6 +76,7 @@ import { simplify } from '../MarkupsCoreUtils'
 
         var setPen = this.setPen(this.position, this.size, this.absolutePath, true);
         setPen.execute();
+        return true;
     };
 
     /**
@@ -139,8 +138,8 @@ import { simplify } from '../MarkupsCoreUtils'
 
         movements = simplify(movements, cameraDiagSq * 0.00000001, true);
 
-        var xs = movements.map(function(item) { return item.x });
-        var ys = movements.map(function(item) { return item.y });
+        var xs = movements.map(function(item) { return item.x; });
+        var ys = movements.map(function(item) { return item.y; });
 
         var l = Math.min.apply(null, xs);
         var t = Math.min.apply(null, ys);
@@ -263,7 +262,7 @@ import { simplify } from '../MarkupsCoreUtils'
             return {
                 x: totalX / count,
                 y: totalY / count
-            }
+            };
         }
         return null;
     };

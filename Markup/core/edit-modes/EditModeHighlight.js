@@ -1,10 +1,10 @@
 'use strict';
 
-import { EditModePen } from './EditModePen'
-import { DeleteHighlight } from '../edit-actions/DeleteHighlight'
-import { CreateHighlight } from '../edit-actions/CreateHighlight'
-import { SetHighlight } from '../edit-actions/SetHighlight'
-import * as MarkupTypes from '../MarkupTypes'
+import { EditModePen } from './EditModePen';
+import { DeleteHighlight } from '../edit-actions/DeleteHighlight';
+import { CreateHighlight } from '../edit-actions/CreateHighlight';
+import { SetHighlight } from '../edit-actions/SetHighlight';
+import * as MarkupTypes from '../MarkupTypes';
 
     /**
      *

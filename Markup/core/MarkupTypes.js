@@ -12,3 +12,4 @@
     export const MARKUP_TYPE_POLYCLOUD = "polycloud";
     export const MARKUP_TYPE_CALLOUT = "callout";
     export const MARKUP_TYPE_DIMENSION = "dimension";
+    export const MARKUP_TYPE_STAMP = "stamp";

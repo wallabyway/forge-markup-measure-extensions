@@ -1,14 +1,14 @@
 'use strict';
 
-import { Markup } from './Markup'
-import * as MarkupTypes from './MarkupTypes'
+import { Markup } from './Markup';
+import * as MarkupTypes from './MarkupTypes';
 import { createMarkupPathSvg, createMarkupTextSvg, composeRGBAString, addMarkupMetadata,
     radiansToDegrees, degreesToRadians, measureTextLines, setMarkupTextSvgTransform,
     setAttributeToMarkupSvg, updateMarkupPathSvgHitarea, createSvgElement, checkLineSegment,
     updateMarkupTextSvgBackground, updateMarkupTextSvgClipper, updateMarkupTextSvgHitarea 
-} from './MarkupsCoreUtils'
-import { cloneStyle } from './StyleUtils'
-import { EditModeDimension } from './edit-modes/EditModeDimension'
+} from './MarkupsCoreUtils';
+import { cloneStyle } from './StyleUtils';
+import { EditModeDimension } from './edit-modes/EditModeDimension';
 
     var DIMENSION_MARKUP_HEIGHT = 10;
     var TEXT_OFFSET = 2;
@@ -359,5 +359,5 @@ import { EditModeDimension } from './edit-modes/EditModeDimension'
             y: pos.y - size.y / 2,
             width: size.x,
             height: size.y
-        }
+        };
     };

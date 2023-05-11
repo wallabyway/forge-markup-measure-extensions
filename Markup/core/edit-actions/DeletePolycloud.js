@@ -1,7 +1,7 @@
 'use strict';
 
-import { EditAction } from './EditAction'
-import { CreatePolycloud } from './CreatePolycloud'
+import { EditAction } from './EditAction';
+import { CreatePolycloud } from './CreatePolycloud';
 
     /**
      *

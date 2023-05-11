@@ -1,4 +1,4 @@
-import { Indicator } from './Indicator'
+import { Indicator } from './Indicator';
 
     var av = Autodesk.Viewing;
     var MeasureCommon = Autodesk.Viewing.MeasureCommon;
@@ -126,7 +126,7 @@ import { Indicator } from './Indicator'
         }
 
         
-        this.viewer.impl.clearOverlay(this.overlayName);
+        this.viewer.impl.clearOverlay(this.overlayName, true);
         this.viewer.impl.removeOverlayScene(this.overlayName);
         
         this.removeWindowEventListener('mouseup', this.handleButtonUpBinded);
@@ -134,7 +134,7 @@ import { Indicator } from './Indicator'
     };
 
     proto.clearRubberband = function() {
-        this.viewer.impl.clearOverlay(this.overlayName);
+        this.viewer.impl.clearOverlay(this.overlayName, true);
     };
 
     proto.clear = function() {
@@ -144,7 +144,7 @@ import { Indicator } from './Indicator'
         this.hideLabel(this.calibrationLabel);
         
         for (var name in this.endpoints) {
-            if (this.endpoints.hasOwnProperty(name)) {
+            if (Object.prototype.hasOwnProperty.call(this.endpoints, name)) {
                 this.hideClick(name);
                 this.endpoints[name].position = null;
             }
@@ -285,8 +285,8 @@ import { Indicator } from './Indicator'
 
     proto.drawMeasurementLineTip = function(point, direction, normal, flip) {
 
-        var tmpVec = new THREE.Vector3();
-        var geometry = new THREE.Geometry();
+        const tmpPoints = [new THREE.Vector3(), new THREE.Vector3()];
+        const geometry = new THREE.BufferGeometry();
         var p1Scale = this.setScale(point);
 
         flip = flip ? -1 : 1;
@@ -294,41 +294,37 @@ import { Indicator } from './Indicator'
         var tipMaterial = (this.snapper.isSnapped() && !this.showMeasureResult) ? this.rubberbandSnappedMaterial : this.rubberbandTipMaterial;
 
         // black tip
-        tmpVec.addVectors(point, normal.clone().multiplyScalar(kCrossLength * p1Scale));
-        geometry.vertices[0] = tmpVec.clone();
-        tmpVec.subVectors(point, normal.clone().multiplyScalar(kCrossLength * p1Scale));
-        geometry.vertices[1] = tmpVec.clone();
+        tmpPoints[0].addVectors(point, normal.clone().multiplyScalar(kCrossLength * p1Scale));
+        tmpPoints[1].subVectors(point, normal.clone().multiplyScalar(kCrossLength * p1Scale));
+        geometry.setFromPoints(tmpPoints);
         this.drawLineAsCylinder(geometry, tipMaterial, kCrossWidth, this.overlayName);
 
-        geometry.vertices[0] = point;
-        tmpVec.subVectors(point, direction.clone().multiplyScalar(kCrossLength * p1Scale * flip));
-        geometry.vertices[1] = tmpVec.clone();
+        tmpPoints[0].copy(point);
+        tmpPoints[1].subVectors(point, direction.clone().multiplyScalar(kCrossLength * p1Scale * flip));
+        geometry.setFromPoints(tmpPoints);
         this.drawLineAsCylinder(geometry, tipMaterial, kCrossWidth, this.overlayName);
 
         // yellow tip
-        tmpVec.addVectors(point, normal.clone().multiplyScalar(kTipXLength * p1Scale));
-        geometry.vertices[0] = tmpVec.clone();
-        tmpVec.subVectors(point, normal.clone().multiplyScalar(kTipXLength * p1Scale));
-        geometry.vertices[1] = tmpVec.clone();
+        tmpPoints[0].addVectors(point, normal.clone().multiplyScalar(kTipXLength * p1Scale));
+        tmpPoints[1].subVectors(point, normal.clone().multiplyScalar(kTipXLength * p1Scale));
+        geometry.setFromPoints(tmpPoints);
         this.drawLineAsCylinder(geometry, this.rubberbandDefaultMaterial, kTipXWidth, this.overlayName);
 
-        tmpVec.addVectors(point, normal.clone().multiplyScalar(kTipXLength * p1Scale));
-        tmpVec.addVectors(tmpVec, direction.clone().multiplyScalar(kTipXLength * p1Scale));
-        geometry.vertices[0] = tmpVec.clone();
-        tmpVec.subVectors(point, normal.clone().multiplyScalar(kTipXLength * p1Scale));
-        tmpVec.subVectors(tmpVec, direction.clone().multiplyScalar(kTipXLength * p1Scale));
-        geometry.vertices[1] = tmpVec.clone();
+        tmpPoints[0].addVectors(point, normal.clone().multiplyScalar(kTipXLength * p1Scale));
+        tmpPoints[0].addVectors(tmpPoints[0], direction.clone().multiplyScalar(kTipXLength * p1Scale));
+        tmpPoints[1].subVectors(point, normal.clone().multiplyScalar(kTipXLength * p1Scale));
+        tmpPoints[1].subVectors(tmpPoints[1], direction.clone().multiplyScalar(kTipXLength * p1Scale));
+        geometry.setFromPoints(tmpPoints);
         this.drawLineAsCylinder(geometry, this.rubberbandDefaultMaterial, kTipXWidth, this.overlayName);
     };
 
     proto.renderDistanceMeasurement = function(p1, p2) {
 
-        this.viewer.impl.clearOverlay(this.overlayName);
+        this.viewer.impl.clearOverlay(this.overlayName, true);
 
         if (!p1 || !p2)
             return;
 
-        var geometry = new THREE.Geometry();
         var lineDirection = new THREE.Vector3().subVectors(p2, p1).normalize();
         var lineNormal = lineDirection.clone().cross(this.viewer.navigation.getEyeVector()).normalize();
         var p1Scale = this.setScale(p1);
@@ -344,8 +340,7 @@ import { Indicator } from './Indicator'
 
         if (this.showMeasureResult) {
             // Single solid line.
-            geometry.vertices[0] = p1;
-            geometry.vertices[1] = p2;
+            const geometry = new THREE.BufferGeometry().setFromPoints([p1, p2]);
             this.drawLineAsCylinder(geometry, lineMaterial, kLineWidth, this.overlayName);
         }
         else {

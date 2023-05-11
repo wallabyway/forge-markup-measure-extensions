@@ -1,7 +1,7 @@
 'use strict';
 
-import { EditAction } from './EditAction'
-import { CreateCallout } from './CreateCallout'
+import { EditAction } from './EditAction';
+import { CreateCallout } from './CreateCallout';
 
     /**
      *

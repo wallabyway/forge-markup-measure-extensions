@@ -1,11 +1,11 @@
 'use strict';
 
-import { Markup } from './Markup'
-import * as MarkupTypes from './MarkupTypes'
+import { Markup } from './Markup';
+import * as MarkupTypes from './MarkupTypes';
 import { createMarkupPathSvg, composeRGBAString, setAttributeToMarkupSvg,
-    updateMarkupPathSvgHitarea, addMarkupMetadata, createEllipsePath } from './MarkupsCoreUtils'
-import { cloneStyle } from './StyleUtils'
-import { EditModeCloud } from './edit-modes/EditModeCloud'
+    updateMarkupPathSvgHitarea, addMarkupMetadata, createEllipsePath } from './MarkupsCoreUtils';
+import { cloneStyle } from './StyleUtils';
+import { EditModeCloud } from './edit-modes/EditModeCloud';
 
     /**
      *
@@ -114,19 +114,15 @@ import { EditModeCloud } from './edit-modes/EditModeCloud'
 
                 case 'LT':
                     return createArcTo( xRadius,-yRadius, xRadius, yRadius, path);
-                    break;
 
                 case 'RT':
                     return createArcTo( xRadius, yRadius, xRadius, yRadius, path);
-                    break;
 
                 case 'RB':
                     return createArcTo(-xRadius, yRadius, xRadius, yRadius, path);
-                    break;
 
                 case 'LB':
                     return createArcTo(-xRadius,-yRadius, xRadius, yRadius, path);
-                    break;
             }
         }
 
@@ -247,8 +243,8 @@ import { EditModeCloud } from './edit-modes/EditModeCloud'
             vSidesParameters = getSideParameters(t + cornerSizeY, b - cornerSizeY, radius, strokeWidth);
 
             var halfStrokeWidth = strokeWidth * 0.5;
-            var x =-size.x * 0.5 + halfStrokeWidth + cornerRadiusX;
-            var y =-size.y * 0.5 + halfStrokeWidth + cornerRadiusY * 2;
+            let x =-size.x * 0.5 + halfStrokeWidth + cornerRadiusX;
+            let y =-size.y * 0.5 + halfStrokeWidth + cornerRadiusY * 2;
 
             path.push('M');
             path.push(x);

@@ -1,7 +1,7 @@
 'use strict';
 
-import { EditAction } from './EditAction'
-import { CreatePolyline } from './CreatePolyline'
+import { EditAction } from './EditAction';
+import { CreatePolyline } from './CreatePolyline';
 
     /**
      *

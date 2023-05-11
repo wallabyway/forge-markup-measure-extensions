@@ -1,11 +1,11 @@
 'use strict';
 
-import { Markup } from './Markup'
-import * as MarkupTypes from './MarkupTypes'
+import { Markup } from './Markup';
+import * as MarkupTypes from './MarkupTypes';
 import { createMarkupPathSvg, composeRGBAString, setAttributeToMarkupSvg,
-    updateMarkupPathSvgHitarea, checkLineSegment, addMarkupMetadata } from './MarkupsCoreUtils'
-import { cloneStyle } from './StyleUtils'
-import { EditModeArrow } from './edit-modes/EditModeArrow'
+    updateMarkupPathSvgHitarea, checkLineSegment, addMarkupMetadata } from './MarkupsCoreUtils';
+import { cloneStyle } from './StyleUtils';
+import { EditModeArrow } from './edit-modes/EditModeArrow';
 
     /**
      *

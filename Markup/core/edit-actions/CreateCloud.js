@@ -1,8 +1,8 @@
 'use strict';
 
-import { EditAction } from './EditAction'
-import { MarkupCloud } from '../MarkupCloud'
-import { cloneStyle } from '../StyleUtils'
+import { EditAction } from './EditAction';
+import { MarkupCloud } from '../MarkupCloud';
+import { cloneStyle } from '../StyleUtils';
 
     /**
      *

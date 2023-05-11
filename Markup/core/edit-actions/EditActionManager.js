@@ -1,8 +1,8 @@
 'use strict';
 
-import { addTraitEventDispatcher } from '../MarkupsCoreUtils'
-import * as MarkupEvents from '../MarkupEvents'
-import { EditActionGroup } from './EditActionGroup'
+import { addTraitEventDispatcher } from '../MarkupsCoreUtils';
+import * as MarkupEvents from '../MarkupEvents';
+import { EditActionGroup } from './EditActionGroup';
 
     /**
      *
@@ -172,7 +172,7 @@ import { EditActionGroup } from './EditActionGroup'
         var undoStack = this.undoStack;
         var undoStackCount = undoStack.length;
         return undoStack[undoStackCount-1];
-    }
+    };
 
     /**
      *

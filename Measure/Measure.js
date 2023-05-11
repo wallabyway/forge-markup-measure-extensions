@@ -1,12 +1,12 @@
-import { MeasureTool } from './MeasureTool'
-import { CalibrationTool } from './CalibrationTool'
-import { MagnifyingGlass } from './MagnifyingGlass'
-import { CalibrationRequiredDialog } from './CalibrationPanels'
-import { MeasureToolbar } from './MeasureToolbar'
+import { MeasureTool } from './MeasureTool';
+import { CalibrationTool } from './CalibrationTool';
+import { MagnifyingGlass } from './MagnifyingGlass';
+import { CalibrationRequiredDialog } from './CalibrationPanels';
+import { MeasureToolbar } from './MeasureToolbar';
 
 
-import CSS_1 from './Measure.css'       // IMPORTANT!!
-import CSS_2 from './Calibration.css'   // IMPORTANT!!
+import './Measure.css';       // IMPORTANT!!
+import './Calibration.css';   // IMPORTANT!!
 
 'use strict';
 
@@ -24,22 +24,25 @@ var DEFAULT_MEASUREMENT_TYPE = MeasureCommon.MeasurementTypes.MEASUREMENT_DISTAN
 
 /**
  * Provides UI controls to perform distance and angle measurements for 2D and 3D models.
- * 
+ *
  * The extension id is: `Autodesk.Measure`
- * 
- * @example
- *   viewer.loadExtension('Autodesk.Measure')
- *  
+ *
+ * @param {Viewer3D} viewer - Viewer instance
+ * @param {object} options - Configurations for the extension
+ * @example 
+ * viewer.loadExtension('Autodesk.Measure')
  * @memberof Autodesk.Viewing.Extensions
  * @alias Autodesk.Viewing.Extensions.MeasureExtension
  * @see {@link Autodesk.Viewing.Extension} for common inherited methods.
- * @constructor
-*/
+ * @class
+ */
 export var MeasureExtension = function(viewer, options) {
     Autodesk.Viewing.Extension.call(this, viewer, options);
-    this.modes = ['distance','angle','area','calibrate'];
+    this.modes = ['distance','angle','area','arc','calibrate'];
     this.name = 'measure';
     this._onModelLoaded = this._onModelLoaded.bind(this);
+    this._onDisplayUnitsPrefChanged = this._onDisplayUnitsPrefChanged.bind(this);
+    this._onPrecisionPrefChanged = this._onPrecisionPrefChanged.bind(this);
 };
 
 MeasureExtension.prototype = Object.create(Autodesk.Viewing.Extension.prototype);
@@ -48,10 +51,11 @@ MeasureExtension.prototype.constructor = MeasureExtension;
 
 /**
  * Load the measure extension.
+ *
  * @returns {boolean} True if measure extension is loaded successfully.
  * 
  * @alias Autodesk.Viewing.Extensions.MeasureExtension#load
-*/
+ */
 MeasureExtension.prototype.load = async function() {
 
     await this.viewer.loadExtension('Autodesk.Snapping');
@@ -76,14 +80,34 @@ MeasureExtension.prototype.load = async function() {
 
     // Shared State with measureTool & calibrationTool.
     // Gets populated when a model is received.
-    this.sharedMeasureConfig = { 
+    // This is wrapped into a proxy to allow change event handling in a central place
+    this.sharedMeasureConfig = new Proxy({ 
         units: null,
         precision: null,
-        calibrationFactor: null
-    };
+        calibrationFactor: null,
+        useViewportInfo: false
+    }, {
+        set(target, prop, value, receiver) {
+            target[prop] = value;
+            switch (prop) {
+                case 'units':
+                    viewer.dispatchEvent({ type: MeasureCommon.Events.DISPLAY_UNITS_CHANGED, units: value});
+                    break;
+                case 'precision':
+                    viewer.dispatchEvent({ type: MeasureCommon.Events.PRECISION_CHANGED, precision: value});
+                    break;
+                case 'calibrationFactor':
+                case 'useViewportInfo':
+                    break;
+                default:
+                    console.log('Unknown property', prop, ' added to sharedMeasureConfig');
+            }
+            return true;
+        }
+    });
 
 	measureToolOptions.snapperOptions = this.options.snapperOptions;
-
+    measureToolOptions.calibrateWithPage = this.options.calibrateWithPage; // True if calibration is done on page and not on viewports (i.e. viewport 0)
     this.forceCalibrate = this.options.forceCalibrate;
 
     this.snapper = new Autodesk.Viewing.Extensions.Snapping.Snapper(viewer, {
@@ -91,11 +115,18 @@ MeasureExtension.prototype.load = async function() {
     });
     viewer.toolController.registerTool(this.snapper);
 
+    const onToolChangedCb = (enable) => {
+        this.setActive(enable);
+        if (!enable) {
+            this.deactivate();
+        }
+    };
+
     this.measureTool = new MeasureTool(viewer, measureToolOptions, this.sharedMeasureConfig, this.snapper);
-    viewer.toolController.registerTool(this.measureTool);
+    viewer.toolController.registerTool(this.measureTool, onToolChangedCb);
 
     this.calibrationTool = new CalibrationTool(viewer, this.options, this.sharedMeasureConfig, this.snapper);
-    viewer.toolController.registerTool(this.calibrationTool);
+    viewer.toolController.registerTool(this.calibrationTool, onToolChangedCb);
 
     this.magnifyingGlass = new MagnifyingGlass(viewer);
     viewer.toolController.registerTool(this.magnifyingGlass);
@@ -158,34 +189,89 @@ MeasureExtension.prototype.load = async function() {
     };
     viewer.addEventListener(av.MODEL_ADDED_EVENT, this.onModelAdded);
     viewer.addEventListener(av.MODEL_REMOVED_EVENT, this.onModelRemoved);
+
+    this.viewer.prefs.addListeners(avp.Prefs.DISPLAY_UNITS, this._onDisplayUnitsPrefChanged, this._onDisplayUnitsPrefChanged);
+    this.viewer.prefs.addListeners(avp.Prefs.DISPLAY_UNITS_PRECISION, this._onPrecisionPrefChanged, this._onPrecisionPrefChanged);
+
+    return true;
+};
+
+/**
+ * @param {string} value - unit
+ * @private
+ */
+MeasureExtension.prototype._onDisplayUnitsPrefChanged = function(value) {
+    if (value !== '') {
+        this.setUnits(value);
+        this.measureToolbar?.updateSettingsPanel();
+        // Also update the units in calibration panel
+        this.calibrationTool.updateCalibrationPanel();
+    }
+};
+
+/**
+ * @param {string} value precision
+ * @private
+ */
+MeasureExtension.prototype._onPrecisionPrefChanged = function (value) {
+   if (typeof value === 'number') {
+       this.setPrecision(value);
+       this.measureToolbar?.updateSettingsPanel();
+   }
 };
 
 MeasureExtension.prototype._onModelLoaded = function(event) {
     var model = event.model;
 
-    const setPdfUnits = !!model.getData().isPdf && !this.viewer.prefs.get(avp.Prefs2D.FORCE_PDF_CALIBRATION);
-    const setLeafletUnits = !!model.getData().isLeaflet && !this.viewer.prefs.get(avp.Prefs2D.FORCE_LEAFLET_CALIBRATION);
+    const setPdfUnits = !!model.isPdf(true) && !this.viewer.prefs.get(avp.Prefs2D.FORCE_PDF_CALIBRATION);
+    const setLeafletUnits = !!model.isLeaflet() && !this.viewer.prefs.get(avp.Prefs2D.FORCE_LEAFLET_CALIBRATION);
 
-    this.sharedMeasureConfig.units = this.options.calibrationUnits || model.getDisplayUnit();
+    // In case of a PDF, look for units and display precision in viewports. PDFs can have multiple viewports, each with a different 
+    // unit and precision.
+    // We skip the first one, as it is not defined in the PDF, but added by LmvCanvasContext
+    let viewportUnits;
+    let viewportPrecision = 3; // default precision
+    if ((model.isSmartPdf() || this.viewer.prefs.get(avp.Prefs2D.USE_PDF_VIEWPORT_INFO)) && model.getData().viewports && model.getData().viewports.length > 1) {
+        // Use the unit of the first viewport as the initial measurement unit.
+        viewportUnits = avp.fixUnitString(model.getData().viewports[1].units);
+
+        if (Number.isInteger(model.getData().viewports[1].precision) && model.getData().viewports[1].precision >= 0)
+            viewportPrecision = model.getData().viewports[1].precision;
+            
+        this.sharedMeasureConfig.useViewportInfo = true;
+    }
+
+    this.sharedMeasureConfig.units = this.options.calibrationUnits || this.viewer.prefs.get(avp.Prefs.DISPLAY_UNITS) || viewportUnits || model.getDisplayUnit();
+
+    // BLMV-6350 - sometimes, due to race condition, we disable Units Drop down before Measure units has been defined.
+    if (!this.sharedMeasureConfig.units) {
+        this.measureToolbar?.disableUnitOption();
+    }
 
     // Set the units to points only for pdf and leaflet models that do not contain model units in the metadata.
-    if ((setPdfUnits || setLeafletUnits) && !model.getMetadata('page_dimensions', 'model_units', null)) {
+    if ((setPdfUnits || setLeafletUnits) && !model.getMetadata('page_dimensions', 'model_units', null) && !viewportUnits) {
         this.sharedMeasureConfig.units = 'pt';
     }
 
-    this.sharedMeasureConfig.precision = model.is2d() ? 3 : 1;
+    const precisionPreference = this.viewer.prefs.get(avp.Prefs.DISPLAY_UNITS_PRECISION);
+    if (typeof precisionPreference === 'number') {
+        this.sharedMeasureConfig.precision = precisionPreference;
+    } else {
+        this.sharedMeasureConfig.precision = model.is2d() ? viewportPrecision : 1; 
+    }
 
     if (this.options.calibrationUnits && !isNaN(this.options.calibrationFactor)) {
         this.calibrationTool.calibrateByScale(this.options.calibrationUnits, this.options.calibrationFactor);
     }
-}
+};
 
 /**
  * Unload the measure extension.
+ *
  * @returns {boolean} True if measure extension is unloaded successfully.
  * 
  * @alias Autodesk.Viewing.Extensions.MeasureExtension#unload
-*/
+ */
 MeasureExtension.prototype.unload = function () {
     var viewer = this.viewer;
 
@@ -211,6 +297,10 @@ MeasureExtension.prototype.unload = function () {
     this.magnifyingGlass = null;
 
     this.unloaded = true;
+    
+    viewer.prefs.removeListeners(avp.Prefs.DISPLAY_UNITS, this._onDisplayUnitsPrefChanged, this._onDisplayUnitsPrefChanged);
+    viewer.prefs.removeListeners(avp.Prefs.DISPLAY_UNITS_PRECISION, this._onPrecisionPrefChanged, this._onPrecisionPrefChanged);
+    
     return true;
 };
 
@@ -229,7 +319,7 @@ MeasureExtension.prototype.setActive = function(active) {
  * Toggles activeness of the measure tool.
  * It does not update the toolbar UI.
  * 
- * @return {boolean} Whether the tool is active.
+ * @returns {boolean} Whether the tool is active.
  */
 MeasureExtension.prototype.toggle = function() {
     if (this.isActive()) {
@@ -242,6 +332,7 @@ MeasureExtension.prototype.toggle = function() {
 
 /**
  * Get the current measurement in the measure tool.
+ *
  * @param {string} [unitType] - Either: "decimal-ft", "ft", "ft-and-decimal-in", "decimal-in", "fractional-in", "m", "cm", "mm" or "m-and-cm".
  * @param {number} [precision] - precision index (0: 0, 1: 0.1, 2: 0.01, 3: 0.001, 4: 0.0001, 5: 0.00001).
  * When units type is "ft", "in" or "fractional-in", then the precisions are 0: 1, 1: 1/2, 2: 1/4, 3: 1/8, 4: 1/16, 5: 1/32, 6: 1/64.
@@ -258,10 +349,11 @@ MeasureExtension.prototype.getMeasurement = function(unitType, precision) {
 
 /**
  * Get a list of all the measurements that are currently on the screen.
+ *
  * @param {string} [unitType] - Either: "decimal-ft", "ft", "ft-and-decimal-in", "decimal-in", "fractional-in", "m", "cm", "mm" or "m-and-cm".
  * @param {number} [precision] - precision index (0: 0, 1: 0.1, 2: 0.01, 3: 0.001, 4: 0.0001, 5: 0.00001).
  * When units type is "ft", "in" or "fractional-in", then the precisions are 0: 1, 1: 1/2, 2: 1/4, 3: 1/8, 4: 1/16, 5: 1/32, 6: 1/64.
- * @returns {Array.<Object>} An array of measurement objects with properties of the measurement.
+ * @returns {Array.<object>} An array of measurement objects with properties of the measurement.
  * @alias Autodesk.Viewing.Extensions.MeasureExtension#getMeasurementList
  */
 
@@ -271,11 +363,12 @@ MeasureExtension.prototype.getMeasurementList = function(unitType, precision) {
       measurementList = this.measureTool.getMeasurementList(unitType, precision);
   }
   return measurementList;
-}
+};
 
 /**
  * Restores existing measurements. The `measurements` object should be generated by either the {@link Autodesk.Viewing.Extensions.MeasureExtension#getMeasurementList|getMeasurementList} or the {@link Autodesk.Viewing.Extensions.MeasureExtension#getMeasurement|getMeasurement} methods.
- * @param {Object[]|Object} measurements - An array of measurement objects
+ *
+ * @param {object[] | object} measurements - An array of measurement objects
  * @alias Autodesk.Viewing.Extensions.MeasureExtension#setMeasurements
  */
 MeasureExtension.prototype.setMeasurements = function(measurements) {
@@ -287,8 +380,9 @@ MeasureExtension.prototype.setMeasurements = function(measurements) {
 
 /**
  * Get all available units in measure tool.
+ *
  * @returns {object[]} Array of all available units.
-*/
+ */
 MeasureExtension.prototype.getUnitOptions = function() {
     var units = [
         { name: 'Unknown', type: '' },
@@ -309,9 +403,10 @@ MeasureExtension.prototype.getUnitOptions = function() {
 
 /**
  * Get all available precisions in measure tool.
+ *
  * @param {boolean} isFractional - Set true to get fractional precisions.
- * @return {string[]} List of all available precisions.
-*/
+ * @returns {string[]} List of all available precisions.
+ */
 MeasureExtension.prototype.getPrecisionOptions = function(isFractional) {
 
     var precisions;
@@ -326,8 +421,9 @@ MeasureExtension.prototype.getPrecisionOptions = function(isFractional) {
 
 /**
  * Get the default measure unit in measure tool.
+ *
  * @returns {string} The default measure unit.
-*/
+ */
 MeasureExtension.prototype.getDefaultUnit = function() {
     var unit = this.viewer.model.getDisplayUnit();
 
@@ -361,7 +457,8 @@ MeasureExtension.prototype.openCalibrationRequiredDialog = function (initiator) 
 
 /**
  * Get the calibration size, unit type and the calibration Factor of the model
- * @returns {Object}
+ *
+ * @returns {object}
  */
 MeasureExtension.prototype.getCalibration = function() {
     return this.calibration;
@@ -376,14 +473,15 @@ MeasureExtension.prototype.getCalibration = function() {
  /**
   * Activates the tool and UI to start measuring.
   * 
-  * @param {string} [mode] - Either 'distance', 'angle', 'area' (2D only) or 'calibrate'. Default is 'distance'.
- * 
- * @alias Autodesk.Viewing.Extensions.MeasureExtension#activate
+  * @param {string} [mode] - Either 'distance', 'angle', 'area' (2D only), 'arc' (2D only) or 'calibrate'. Default is 'distance'.
+  * 
+  * @alias Autodesk.Viewing.Extensions.MeasureExtension#activate
   */
 MeasureExtension.prototype.activate = function (mode) {
     if (this.activeStatus && this.mode === mode) {
         return true;
     }
+
     this.enterMeasurementMode();
 
     var success;
@@ -391,6 +489,7 @@ MeasureExtension.prototype.activate = function (mode) {
     switch (mode) {
         default:
             mode = 'distance';
+            // falls through
         case 'distance':
             success = this.enableMeasureTool(true, MeasureCommon.MeasurementTypes.MEASUREMENT_DISTANCE);
             break;
@@ -404,9 +503,17 @@ MeasureExtension.prototype.activate = function (mode) {
                 success = this.enableMeasureTool(true, MeasureCommon.MeasurementTypes.MEASUREMENT_AREA);
             }
             break;
+        case 'arc':
+            if(!this.viewer.model.is2d() || this.viewer.model.isPdf()) {
+                console.warn('Arc mode is applicable on 2D models only');
+            } else {
+                success = this.enableMeasureTool(true, MeasureCommon.MeasurementTypes.MEASUREMENT_ARC);
+            }
+            break;
         case 'calibrate':
             success = this.enableCalibrationTool(true);
             break;
+
     }
 
     this.mode = success ? mode : '';
@@ -432,7 +539,8 @@ MeasureExtension.prototype.deactivate = function () {
 
 /**
  * Force the calibration panel for pdf models
- * @param {Boolean} enable - true to force the calibration panel
+ *
+ * @param {boolean} enable - true to force the calibration panel
  */
 MeasureExtension.prototype.setForcePDFCalibrate = function(enable) {
     this.viewer.prefs.set(avp.Prefs2D.FORCE_PDF_CALIBRATION, enable);
@@ -440,7 +548,8 @@ MeasureExtension.prototype.setForcePDFCalibrate = function(enable) {
 
 /**
  * Force the calibration panel for leaflet models
- * @param {Boolean} enable - true to force the calibration panel
+ *
+ * @param {boolean} enable - true to force the calibration panel
  */
 MeasureExtension.prototype.setForceLeafletCalibrate = function(enable) {
     this.viewer.prefs.set(avp.Prefs2D.FORCE_LEAFLET_CALIBRATION, enable);
@@ -448,15 +557,18 @@ MeasureExtension.prototype.setForceLeafletCalibrate = function(enable) {
 
 /**
  * Restore session measurements when enabling the measure tool.
- * @param {Boolean} enable - true to restore session measurements. 
+ *
+ * @param {boolean} enable - true to restore session measurements. 
  */
 MeasureExtension.prototype.setRestoreSessionMeasurements = function(enable) {
     this.viewer.prefs.set(avp.Prefs.RESTORE_SESSION_MEASUREMENTS, enable);
-}
+};
 
 /**
  * Enable/disable the measure tool.
+ *
  * @param {boolean} enable - True to enable, false to disable.
+ * @param measurementType
  * @returns {boolean} True if the tool state was changed.
  * @private
  */
@@ -464,6 +576,14 @@ MeasureExtension.prototype.enableMeasureTool = function(enable, measurementType)
     if (measurementType === MeasureCommon.MeasurementTypes.MEASUREMENT_AREA && this.viewer.model && !this.viewer.model.is2d()) {
         return false;
     }
+
+    // arc measurement is not supported for 3D models
+    if (measurementType === MeasureCommon.MeasurementTypes.MEASUREMENT_ARC && this.viewer.model && !this.viewer.model.is2d()) {
+        return false;
+    }
+
+    const snapToArc = (measurementType === MeasureCommon.MeasurementTypes.MEASUREMENT_ARC && this.viewer.model?.is2d());
+    this.snapper.setSnapToArc(snapToArc);
 
     var toolController = this.viewer.toolController,
         isActive = (this.selectedTool === MEASURE_TOOL);
@@ -485,8 +605,9 @@ MeasureExtension.prototype.enableMeasureTool = function(enable, measurementType)
         return true;
     }
 
-    const forcePDFCalibration = this.viewer.model.getData().isPdf && this.viewer.prefs.get(avp.Prefs2D.FORCE_PDF_CALIBRATION);
-    const forceLeafletCalibration = this.viewer.model.getData().isLeaflet && this.viewer.prefs.get(avp.Prefs2D.FORCE_LEAFLET_CALIBRATION);
+    const is2d = this.viewer.impl.is2d;
+    const forcePDFCalibration = is2d && this.viewer.model.isPdf(true) && this.viewer.prefs.get(avp.Prefs2D.FORCE_PDF_CALIBRATION);
+    const forceLeafletCalibration = is2d && this.viewer.model.isLeaflet() && this.viewer.prefs.get(avp.Prefs2D.FORCE_LEAFLET_CALIBRATION);
 
     this.forceCalibrate |= forceLeafletCalibration || forcePDFCalibration;
 
@@ -551,10 +672,13 @@ MeasureExtension.prototype.changeMeasurementType = function(measurementType) {
             this.mode = 'distance';
             break;
         case MeasureCommon.MeasurementTypes.MEASUREMENT_ANGLE:
-            this.mode = 'angle'
+            this.mode = 'angle';
             break;
         case MeasureCommon.MeasurementTypes.MEASUREMENT_AREA:
             this.mode = 'area';
+            break;
+        case MeasureCommon.MeasurementTypes.MEASUREMENT_ARC:
+            this.mode = 'arc';
             break;
         default:
             this.mode = '';
@@ -576,10 +700,11 @@ MeasureExtension.prototype.setIsolateMeasure = function(enable) {
     } else {
         this.measureTool.clearIsolate();
     }
-}
+};
 
 /**
  * Enable/disable the measure tool.
+ *
  * @param {boolean} enable - True to enable, false to disable.
  * @returns {boolean} True if the tool state was changed.
  * @private
@@ -678,8 +803,10 @@ MeasureExtension.prototype.exitMeasurementMode = function() {
 
 /**
  * Create measure button in toolbar.
+ *
+ * @param toolbar
  * @private
-*/
+ */
 MeasureExtension.prototype.onToolbarCreated = function(toolbar)
 {
     if (this.measureToolbar) {
@@ -724,6 +851,7 @@ MeasureExtension.prototype.onToolbarCreated = function(toolbar)
 
 
 /**
+ * @param tool
  * @private
  */
 MeasureExtension.prototype.checkAndFetchTopology = function(tool) {
@@ -746,7 +874,7 @@ MeasureExtension.prototype.checkAndFetchTopology = function(tool) {
     // Fetch topology from backend.
     tool && tool.setFetchingTopology();
     this.viewer.model.fetchTopology()
-    .then(function(topoData){
+    .then(function(){
         tool && tool.setTopologyAvailable();
     })
     .catch(function(err){
@@ -757,8 +885,9 @@ MeasureExtension.prototype.checkAndFetchTopology = function(tool) {
 
 /**
  * Destroy measure button in toolbar.
+ *
  * @private
-*/
+ */
 MeasureExtension.prototype.destroyUI = function()
 {
     var viewer = this.viewer;
@@ -836,11 +965,25 @@ MeasureExtension.prototype.selectMeasurementById = function(id) {
 
 /**
  * Enable measuring on non snapped locations.
+ *
  * @alias Autodesk.Viewing.Extensions.MeasureExtension#setFreeMeasureMode
- * @param {Boolean} allow - true to allow measuring on non snapped locations, otherwise false;
+ * @param {boolean} allow - true to allow measuring on non snapped locations, otherwise false;
+ * @param {boolean} useLastViewport - override the free measurement's viewport with a previously created measurement's viewport.
  */
-MeasureExtension.prototype.setFreeMeasureMode = function(allow) {
+MeasureExtension.prototype.setFreeMeasureMode = function(allow, useLastViewport) {
     this.snapper.setSnapToPixel(allow);
+    this.measureTool.setUseLastViewport(!!useLastViewport);
+};
+
+/**
+ * Checks whether measuring can be performed from non snapped locations.
+ *
+ * @alias Autodesk.Viewing.Extensions.MeasureExtension#isFreeMeasureMode
+ *
+ * @returns {boolean} true is users can measure from any location.
+ */
+MeasureExtension.prototype.isFreeMeasureMode = function() {
+    return this.snapper.getSnapToPixel();
 };
 
 av.theExtensionManager.registerExtension('Autodesk.Measure', MeasureExtension);

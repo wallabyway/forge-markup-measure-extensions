@@ -21,15 +21,16 @@ export var MagnifyingGlass = function(viewer) {
     
     this.setGlobalManager(viewer.globalManager);
 
-    this.isActive = function() {
+    this.register = function() {
+        this.updateMagnifyingGlassBinded = this.updateMagnifyingGlass.bind(this);
+    };
 
+    this.isActive = function() {
         return _active;
     };
 
     this.activate = function() {
-
         _active = true;
-        this.updateMagnifyingGlassBinded = this.updateMagnifyingGlass.bind(this);
     };
 
     this.updateMagnifyingGlass = function() {
@@ -64,9 +65,9 @@ export var MagnifyingGlass = function(viewer) {
             }
 
             var ctx = _magnifyingGlassCanvas.getContext("2d");
-            
+
             // Read the pixels from the frame buffer
-            var gl = _viewer.canvas.getContext("webgl2") || _viewer.canvas.getContext("webgl") || _viewer.canvas.getContext("experimental-webgl");         
+            var gl = _viewer.impl.glrenderer().getContext();
             gl.readPixels(x, _viewer.canvas.height - y - _imageData.height, _imageData.width, _imageData.height, gl.RGBA, gl.UNSIGNED_BYTE, _imageBuffer);
             // Put the pixel into the magnifying context.
             ctx.putImageData(_imageData, 0, 0);
@@ -118,6 +119,7 @@ export var MagnifyingGlass = function(viewer) {
     };
 
     this.drawMagnifyingGlass = function(clientX, clientY) {
+        _needsClear = false;
         _clientX = clientX;
         _clientY = clientY;
         _viewer.impl.invalidate(false, false, true);

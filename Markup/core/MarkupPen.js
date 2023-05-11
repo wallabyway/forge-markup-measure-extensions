@@ -1,9 +1,9 @@
 'use strict';
 
-import { Markup } from './Markup'
+import { Markup } from './Markup';
 import { createMarkupPathSvg, setAttributeToMarkupSvg, updateMarkupPathSvgHitarea,
-    composeRGBAString, addMarkupMetadata } from './MarkupsCoreUtils'
-import { cloneStyle } from './StyleUtils'
+    composeRGBAString, addMarkupMetadata } from './MarkupsCoreUtils';
+import { cloneStyle } from './StyleUtils';
 
     /**
      * Base class for Pen Markup rendering (currently freehand and highlighter)

@@ -1,11 +1,11 @@
 'use strict';
 
-import { Markup } from './Markup'
-import * as MarkupTypes from './MarkupTypes'
+import { Markup } from './Markup';
+import * as MarkupTypes from './MarkupTypes';
 import { createMarkupPathSvg, composeRGBAString, setAttributeToMarkupSvg, 
-        updateMarkupPathSvgHitarea, addMarkupMetadata, createEllipsePath } from './MarkupsCoreUtils'
-import { cloneStyle } from './StyleUtils'
-import { EditModeCircle } from './edit-modes/EditModeCircle'
+        updateMarkupPathSvgHitarea, addMarkupMetadata, createEllipsePath } from './MarkupsCoreUtils';
+import { cloneStyle } from './StyleUtils';
+import { EditModeCircle } from './edit-modes/EditModeCircle';
 
     /**
      *

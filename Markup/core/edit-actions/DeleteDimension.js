@@ -1,7 +1,7 @@
 'use strict';
 
-import { EditAction } from './EditAction'
-import { CreateDimension } from './CreateDimension'
+import { EditAction } from './EditAction';
+import { CreateDimension } from './CreateDimension';
 
     /**
      *

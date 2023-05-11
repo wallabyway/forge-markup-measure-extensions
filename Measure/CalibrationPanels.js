@@ -45,9 +45,7 @@
         this.setGlobalManager && this.setGlobalManager(viewer.globalManager);
 
         this.addEventListener( this.closer, "click", function(e) {
-            self.setVisible(false);
-            self.calibrationTool.clearSize();
-            self.calibrationTool.showAddCalibrationLabel();
+            self.cancel();            
         });
 
         if (!options.heightAdjustment)
@@ -96,10 +94,14 @@
 
             // Escape (For IE11)
             if (e.keyCode == av.KeyCode.ESCAPE) {
-                self.setVisible(false);
-                self.calibrationTool.clearSize();
-                self.calibrationTool.showAddCalibrationLabel();
+                self.cancel();                
                 return;
+            }
+
+            if (e.keyCode == av.KeyCode.ENTER) {
+                var index = self.unitList.selectedIndex;
+                var requestedUnits = self.units[index].units;
+                self.calibrationTool.calibrate(requestedUnits, self.requestedSizeTextbox.value);
             }
 
             var requestedSize = self.requestedSizeTextbox.value;
@@ -129,9 +131,9 @@
 
         // Unit Type Row
         this.units = [
-            { name: 'Feet and fractional inches', units: 'ft-and-fractional-in', matches: ['ft-and-fractional-in'], simpleInput: false },
-            { name: 'Feet and decimal inches', units: 'ft-and-decimal-in', matches: ['ft-and-decimal-in'], simpleInput: false },
-            { name: 'Meters', units: 'm', matches: ['m'], simpleInput: true },
+            { name: 'Feet and fractional inches', units: 'ft-and-fractional-in', matches: ['ft-and-fractional-in', 'fractional-in'], simpleInput: false },
+            { name: 'Feet and decimal inches', units: 'ft-and-decimal-in', matches: ['ft', 'decimal-ft', 'in', 'decimal-in', 'ft-and-decimal-in'], simpleInput: false },
+            { name: 'Meters', units: 'm', matches: ['m', 'm-and-cm'], simpleInput: true },
             { name: 'Centimeters', units: 'cm', matches: ['cm'], simpleInput: true },
             { name: 'Millimeters', units: 'mm', matches: ['mm'], simpleInput: true }
         ];
@@ -140,19 +142,35 @@
         for (var i = 0; i < this.units.length; ++i) {
             unitNames.push(this.units[i].name);
         }
-        this.unitList = new avp.OptionDropDown("Unit type", this.tbody, unitNames, 0, null, { paddingLeft: 0, paddingRight: 15 });
+        this.unitList = new avp.OptionDropDown("Unit type", this.tbody, unitNames, 0, null, undefined, { paddingLeft: 0, paddingRight: 0 });
         this.unitList.setGlobalManager(this.globalManager);
         this.addEventListener(this.unitList, "change", function(e) {
             self.updateLabel();
         });
 
+        var buttonsWrapper = _document.createElement('div');
+        buttonsWrapper.classList.add('docking-panel-footer');
+        this.calibrationMenu.appendChild(buttonsWrapper);        
+
+        // Cancel button
+        var cancel = _document.createElement('div');
+        cancel.classList.add('docking-panel-secondary-button');        
+
+        cancel.setAttribute("data-i18n", "Cancel");
+        cancel.textContent = av.i18n.translate("Cancel");
+
+        cancel.addEventListener('click', function () {
+            self.cancel();            
+        }, false);
+
+        buttonsWrapper.appendChild(cancel);
+
         // Set Calibration button
         var setCalibration = _document.createElement('div');
         setCalibration.classList.add('docking-panel-primary-button');
-        setCalibration.classList.add('calibration-button');
 
-        setCalibration.setAttribute("data-i18n", "Set Calibration");
-        setCalibration.textContent = av.i18n.translate("Set Calibration");
+        setCalibration.setAttribute("data-i18n", "Calibrate");
+        setCalibration.textContent = av.i18n.translate("Calibrate");
 
         setCalibration.addEventListener('click', function () {
             var index = self.unitList.selectedIndex;
@@ -160,9 +178,7 @@
             self.calibrationTool.calibrate(requestedUnits, self.requestedSizeTextbox.value);
         }, false);
 
-        this.calibrationMenu.appendChild(setCalibration);
-        
-
+        buttonsWrapper.appendChild(setCalibration);
     }; // end constructor
 
     var isPositiveNumber = function (n) {
@@ -185,6 +201,12 @@
         DockingPanel.prototype.uninitialize.call(this);
     };
 
+    CalibrationPanel.prototype.cancel = function cancel() {
+        this.setVisible(false);
+        this.calibrationTool.clearSize();
+        this.calibrationTool.showAddCalibrationLabel();
+    };
+
     CalibrationPanel.prototype.findUnits = function findUnits() {
         var i,
             j,
@@ -203,8 +225,12 @@
     };
 
     CalibrationPanel.prototype.setPanelValue = function(size) {
-        this.unitList.setSelectedIndex(this.findUnits());
+        this.updateUnits();
         this.requestedSizeTextbox.value = size;
+    };
+
+    CalibrationPanel.prototype.updateUnits = function() {
+        this.unitList.setSelectedIndex(this.findUnits());
     };
 
     CalibrationPanel.prototype.updateLabel = function() {
@@ -281,8 +307,6 @@
         this.measureExt = measureExt;
         this.parentContainer = viewer.container;
         this.container.classList.add('calibration-panel');
-        this.container.style.width = "380px";
-        this.container.style.height = "190px";
         
         this.setGlobalManager && this.setGlobalManager(viewer.globalManager);
 

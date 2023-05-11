@@ -1,8 +1,8 @@
 'use strict';
 
-import { EditAction } from './EditAction'
-import { MarkupCallout } from '../MarkupCallout'
-import { cloneStyle } from '../StyleUtils'
+import { EditAction } from './EditAction';
+import { MarkupCallout } from '../MarkupCallout';
+import { cloneStyle } from '../StyleUtils';
 
     /**
      *

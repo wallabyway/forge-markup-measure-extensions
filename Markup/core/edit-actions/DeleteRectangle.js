@@ -1,7 +1,7 @@
 'use strict';
 
-import { EditAction } from './EditAction'
-import { CreateRectangle } from './CreateRectangle'
+import { EditAction } from './EditAction';
+import { CreateRectangle } from './CreateRectangle';
 
     /**
      *

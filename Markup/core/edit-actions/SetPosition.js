@@ -1,6 +1,6 @@
 'use strict';
 
-import { EditAction } from './EditAction'
+import { EditAction } from './EditAction';
 
     export function SetPosition(editor, markup, position) {
 

@@ -1,8 +1,8 @@
 'use strict';
 
-import { EditAction } from './EditAction'
-import { MarkupCircle } from '../MarkupCircle'
-import { cloneStyle } from '../StyleUtils'
+import { EditAction } from './EditAction';
+import { MarkupCircle } from '../MarkupCircle';
+import { cloneStyle } from '../StyleUtils';
 
     /**
      * Markup create circle action.

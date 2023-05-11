@@ -1,7 +1,7 @@
 'use strict';
 
-import { EditAction } from './EditAction'
-import { CreateHighlight } from './CreateHighlight'
+import { EditAction } from './EditAction';
+import { CreateHighlight } from './CreateHighlight';
 
     /**
      *

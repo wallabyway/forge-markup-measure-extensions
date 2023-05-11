@@ -1,5 +1,6 @@
-import { CalibrationToolIndicator } from './CalibrationToolIndicator'
-import { CalibrationPanel } from './CalibrationPanels'
+import { CalibrationToolIndicator } from './CalibrationToolIndicator';
+import { CalibrationPanel } from './CalibrationPanels';
+import { SET_MOUSE_TRACKING } from './EventTypes';
 
 const av = Autodesk.Viewing;
 
@@ -10,7 +11,6 @@ const av = Autodesk.Viewing;
 export var CalibrationTool = function( viewer, options, sharedMeasureConfig, snapper)
 {   
     var av = Autodesk.Viewing;
-    var avem = Autodesk.Viewing.Extensions.Measure;
     var MeasureCommon = Autodesk.Viewing.MeasureCommon;
 
     var _names  = ["calibration"];
@@ -57,7 +57,6 @@ export var CalibrationTool = function( viewer, options, sharedMeasureConfig, sna
     var _cursor = "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAYCAYAAAD+vg1LAAAAAXNSR0IArs4c6QAAAwZJREFUSA2tVEtLW0EUvjGJefoqSY0x0WBSiY+oNWiUINkU6ioLaaAlG1eudNVFoT+grgopiCkEIbUK1o0lusmurRSEWmmKG6MNtNhNosWqyU2CZPpN8cr15nFD7YHDzHnON2fOGYZhmHkw4XEW+wD4xkT4lMvl6CE0+Y2ohh+dz+cZn89HVS/5+n/d/wVMkXq9Xor2v5SBgsmymQwZHx+vOqlKpXKDXWI3eU6Tg+kqSjSh3W4/s9lsvzUajaNcAK3xY7Dyci3nd6WXSCS60dHRvMfjSRcKBfWV4SYbrVarB8p0PB5nY7HYmdVq/aDX67WlckpKKcvpOjs7X09OTvoPDw8z2Wy2Bu+imJqa+npycnJXGHOt3YRGoSyVSvvMZrNkYWFBs7GxkaoBAXFJcDJhcCW5rq5ur62trQ/EOhyOBhDT2Nj4qVKMqA31ve1yub7Rfufo/PycDA4OxpuamhqECaouhVqtfuD3+1tqa2uZQCCQDoVCWTwknVQDDvIKE1clI1ja09Ozg0cjx8fHpL+/P+50OhMU8f7+Punt7f2I5NdqXRXi9fV1z9jYWCuIWV5eziSTyWAqlXq1urqaw6AwOMiCG4lOYtEturu732xubhK0FQHSvfr6+lsog4HWPIPvIBqNErRiqCiwkkKpVFowZd8xZSQYDLImk+kJ52+xWJ4tLS3hU8yTkZGRBD2Ms4mu6Nun4XA4f3p6SoaGhuJ0+rgg/Bsmt9udYFmWzM3NZdDT05ztWsE5JV0R1AqUCfTt0fb2tjESiRRmZmaOUOcI3w9DY5mdnb03PDzMoDQ/MZFRzM20lO/E38vl8vt46UdAq0WNJWixlEwmu8B1bXioOxwjpgXJ0hMTE1og1qysrDghf+HnKtoD7c7u7i5ZXFzMGY3GF7iFuRR3dHTMr62tXWxtbZH29vZ3RYmECozu54ODAzpdP2hphHZOVigUVjChvgMDA+85fdm1q6vrrU6n+4WR9Zd1ujQ0Nzc/NBgMScSExXwZ2j5oL5Wo46UD/ZvxUemo+AdW1zJzUYr16wAAAABJRU5ErkJggg==), auto";
     var _hasUI = Autodesk.Viewing.GuiViewer3D && viewer instanceof Autodesk.Viewing.GuiViewer3D;
 
-    var MeasureCommon = Autodesk.Viewing.MeasureCommon;
 
     function getActivePick()
     {
@@ -200,6 +199,13 @@ export var CalibrationTool = function( viewer, options, sharedMeasureConfig, sna
                 
                 this.showPanel();
             }
+        } else if (_hasUI) {
+            const message = {
+                messageKey    : "Select two points",
+                messageDefaultValue  : "Select two points to calibrate drawing",
+                position: "top"
+            };
+            Autodesk.Viewing.Private.HudMessage.displayMessage(_viewer.container, message);
         }
 
         _viewer.addEventListener(Autodesk.Viewing.CAMERA_CHANGE_EVENT, this.onCameraChangeBinded);
@@ -211,8 +217,11 @@ export var CalibrationTool = function( viewer, options, sharedMeasureConfig, sna
         if (!_active)
             return;
 
+        _viewer.dispatchEvent({ type: SET_MOUSE_TRACKING, mode: 'end' });
+
         _active = false;
 
+        Autodesk.Viewing.Private.HudMessage.dismiss();
         this.hidePanel();
         this.updateViewportId(true);
         _waitingForInput = false;
@@ -312,6 +321,8 @@ export var CalibrationTool = function( viewer, options, sharedMeasureConfig, sna
 
     this.showPanel = function() {
 
+        Autodesk.Viewing.Private.HudMessage.dismiss();
+
         var self = this;
         const _window = this.getWindow();
 
@@ -319,6 +330,7 @@ export var CalibrationTool = function( viewer, options, sharedMeasureConfig, sna
             _window.setTimeout(function () { _calibrationPanel.requestedSizeTextbox.focus();}, 0);
             _calibrationPanel.setVisible(true);
             _calibrationPanel.updatePanelPosition(_measurement.indicator.labelPosition, _measurement.indicator.p1, _measurement.indicator.p2, _measurement.indicator.calibrationLabel.clientHeight);
+            _calibrationPanel.updateUnits();
             self.addWindowEventListener("keyup", function onKeyUp(e){
                 var key = e.key || String.fromCharCode(e.keyCode);
                 if (key == "Escape" && self.isActive()) {
@@ -333,6 +345,10 @@ export var CalibrationTool = function( viewer, options, sharedMeasureConfig, sna
         else {
             _viewer.dispatchEvent({ type: MeasureCommon.Events.OPEN_CALIBRATION_PANEL_EVENT, data: {size: _selectedSize, units: _selectedUnits } });
         }
+    };
+
+    this.updateCalibrationPanel = function() {
+        _calibrationPanel && _calibrationPanel.updateUnits();
     };
 
     this.showAddCalibrationLabel = function() {
@@ -453,8 +469,10 @@ export var CalibrationTool = function( viewer, options, sharedMeasureConfig, sna
                 this.clearSize();
                 this.showPanel();
                 _waitingForInput = true;
+                _viewer.dispatchEvent({ type: SET_MOUSE_TRACKING, mode: 'end' });
             }
             else {
+                _viewer.dispatchEvent({ type: SET_MOUSE_TRACKING, mode: 'start' });
                 this.hidePanel();
                 _measurement.indicator.updateLabelValue(null);
                 _waitingForInput = false;
@@ -602,13 +620,14 @@ export var CalibrationTool = function( viewer, options, sharedMeasureConfig, sna
         _measurement.indicator.changeAllEndpointsEditableStyle(false);
 
         for (var key in _measurement.picks) {
-            if (_measurement.picks.hasOwnProperty(key)) {
+            if (Object.prototype.hasOwnProperty.call(_measurement.picks, key)) {
                 _picksBackup[key] = _measurement.getPick(key).clone();
             }
         }
 
         this.updateViewportId();
 
+        _viewer.dispatchEvent({ type: SET_MOUSE_TRACKING, mode: 'start' });
         this.hidePanel();
         _measurement.indicator.updateLabelValue(null);
         _waitingForInput = false;
@@ -622,7 +641,7 @@ export var CalibrationTool = function( viewer, options, sharedMeasureConfig, sna
         _measurement.indicator.clear();
 
         for (var key in _measurement.picks) {
-            if (_measurement.picks.hasOwnProperty(key)) {
+            if (Object.prototype.hasOwnProperty.call(_measurement.picks, key)) {
                 _measurement.setPick(key, _picksBackup[key].clone());
             }
         }

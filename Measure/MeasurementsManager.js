@@ -18,7 +18,7 @@
 
     proto.getRestoredMeasurementData = function() {
         return this.restoredMeasurementData.slice();
-    }
+    };
 
     proto.selectMeasurementById = function(id) {
         var measurement = this.measurementsList[id];
@@ -31,9 +31,9 @@
         return false;
     };
 
-    proto.createMeasurement = function(measurementType) {
+    proto.createMeasurement = function(measurementType, options) {
         var id = this.measurementsCounter;
-        var measurement = new MeasureCommon.Measurement(measurementType, id);
+        var measurement = new MeasureCommon.Measurement(measurementType, id, options);
         this.measurementsList[id] = measurement;
         this.measurementsCounter++;
         this.changeCurrentMeasurement(measurement);
@@ -42,7 +42,34 @@
 
     // Renders measurements from data.
     proto.createMeasurementFromData = function(measurementData, measurementType, createIndicatorCb, preparePicksCb) {
-        this.createMeasurement(measurementType);
+        // Convert optional values from DWF to local coordinate
+        let options = measurementData.options;
+        if (options) {
+            // Deep clone options
+            options = JSON.parse(JSON.stringify(options));
+
+            // Convert global world coordinats to LMV coordinates
+            const model =
+                Object.prototype.hasOwnProperty.call(options, 'modelId') && options.modelId
+                    ? this.viewer.impl.findModel(options.modelId)
+                    : this.viewer.model;
+            const globalOffset = model && model.getData().globalOffset;
+            if (globalOffset && (globalOffset.x !== 0 || globalOffset.y !== 0 || globalOffset.z !== 0)) {
+                const cvtPts = points => {
+                    if (points) {
+                        for (let i = 0; i < points.length; ++i) {
+                            // Tricky way to use Vector3 sub on plain objects
+                            THREE.Vector3.prototype.sub.call(points[i], globalOffset);
+                        }
+                    }
+                };
+                cvtPts(options.dimensionOffset);
+                cvtPts(options.dashedLeader);
+                cvtPts(options.arc);
+            }
+        }
+
+        this.createMeasurement(measurementType, options);
         if (createIndicatorCb instanceof Function) {
             createIndicatorCb(this.currentMeasurement);
         }
@@ -55,48 +82,42 @@
 
         if (this.currentMeasurement.measurementType === MeasureCommon.MeasurementTypes.MEASUREMENT_AREA) {
             this.currentMeasurement.closedArea = true;
+        } else if (this.currentMeasurement.measurementType === MeasureCommon.MeasurementTypes.MEASUREMENT_CALLOUT) {
+            this.currentMeasurement.text = measurementData.text;
         }
 
-        this.currentMeasurement.isRestored = true;
-
-        const convertUnits = (value, square) => {
-            return Autodesk.Viewing.Private.convertUnits(
-                measurementData.sharedUnits,
-                this.viewer.model.getUnitString(),
-                measurementData.sharedCalibrationFactor,
-                parseFloat(value),
-                square
-            );
-        };
-
-        this.currentMeasurement.distanceXYZ = convertUnits(measurementData.distance);
-        this.currentMeasurement.distanceX = convertUnits(measurementData.deltaX);
-        this.currentMeasurement.distanceY = convertUnits(measurementData.deltaY);
-        this.currentMeasurement.distanceZ = convertUnits(measurementData.deltaZ);
-
-        this.currentMeasurement.area = convertUnits(measurementData.area, 'square');
-        this.currentMeasurement.angle = parseFloat(measurementData.angle);
-
-        const getIntersectPoints = () => {
+        const preparePointData = () => {
             const points = this.restoredMeasurementData[this.currentMeasurement.id];
             const keys = Object.keys(points);
-            const intersectPoints = [];
+            const data = [];
             for (let i = 0; i < keys.length; i++) {
                 const key = keys[i];
                 const pointData = points[key];
-                intersectPoints[key] = pointData.intersection;
+                data[key] = {
+                    intersection: pointData.intersection,
+                    circularArcRadius: pointData.circularArcRadius,
+                    circularArcCenter: pointData.circularArcCenter,
+                };
             }
-            return intersectPoints;
+            return data;
         };
-
-        // This will render the measurements
-        this.currentMeasurement.indicator.renderFromPoints(getIntersectPoints(), true);
 
         this.currentMeasurement.indicator.changeAllEndpointsEditableStyle(true);
         this.currentMeasurement.indicator.enableSelectionAreas(true);
         this.currentMeasurement.indicator.enableLabelsTouchEvents(true);
 
         this.activatePicks();
+
+        this.currentMeasurement.computeResult(this.currentMeasurement.picks, this.viewer);
+
+        // This will render the measurements
+        this.currentMeasurement.indicator.renderFromPoints(preparePointData(), true);
+
+        this.currentMeasurement.indicator.changeAllEndpointsEditableStyle(true);
+        this.currentMeasurement.indicator.enableSelectionAreas(true);
+        this.currentMeasurement.indicator.enableLabelsTouchEvents(true);
+
+        this.currentMeasurement.isRestored = true;
     };
 
     // Initializes picks from pick data
@@ -111,15 +132,15 @@
 
             let pickPoint = new THREE.Vector3(pick.intersection.x, pick.intersection.y, pick.intersection.z);
             const model =
-                pick.hasOwnProperty('modelId') && pick.modelId
+                Object.prototype.hasOwnProperty.call(pick, 'modelId') && pick.modelId
                     ? this.viewer.impl.findModel(pick.modelId)
                     : this.viewer.model;
 
             if (model) {
                 const modelData = model.getData();
                 pickPoint =
-                    modelData && modelData.hasOwnProperty('globalOffset')
-                        ? pickPoint.add(modelData.globalOffset).clone()
+                    modelData && Object.prototype.hasOwnProperty.call(modelData, 'globalOffset')
+                        ? pickPoint.sub(modelData.globalOffset).clone()
                         : pickPoint.clone();
             }
 
@@ -127,7 +148,10 @@
                 intersection: pickPoint,
                 viewportId: pick.viewportIndex2d,
                 hasTopology: pick.hasTopology,
-                modelId: pick.modelId
+                modelId: pick.modelId,
+                snapNode: pick.snapNode,
+                circularArcRadius: pick.circularArcRadius,
+                circularArcCenter: pick.circularArcCenter
             };
             this.currentMeasurement.getPick(key);
         }
@@ -154,6 +178,9 @@
                 pick.geomVertex = p;
                 pick.intersectPoint = p;
                 pick.modelId = pointInfo.modelId;
+                pick.snapNode = pointInfo.snapNode; // the dbid of the pick. This is used for isolation.
+                pick.circularArcCenter = pointInfo.circularArcCenter;
+                pick.circularArcRadius = pointInfo.circularArcRadius;
 
                 // Set the isRestored flag if all of the picks are valid.
                 pick.viewportIndex2d = pointInfo.viewportId;

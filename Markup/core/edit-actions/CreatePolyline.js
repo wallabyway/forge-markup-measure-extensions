@@ -1,8 +1,8 @@
 'use strict';
 
-import { EditAction } from './EditAction'
-import { MarkupPolyline } from '../MarkupPolyLine'
-import { cloneStyle } from '../StyleUtils'
+import { EditAction } from './EditAction';
+import { MarkupPolyline } from '../MarkupPolyLine';
+import { cloneStyle } from '../StyleUtils';
 
     /**
      *

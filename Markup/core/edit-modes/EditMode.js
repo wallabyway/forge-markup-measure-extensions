@@ -1,9 +1,9 @@
 'use strict';
 
-import * as MarkupEvents from '../MarkupEvents'
-import { createStyle, copyStyle } from '../StyleUtils'
-import { addTraitEventDispatcher, removeTraitEventDispatcher, sign } from '../MarkupsCoreUtils'
-import { SetStyle } from '../edit-actions/SetStyle'
+import * as MarkupEvents from '../MarkupEvents';
+import { createStyle, copyStyle } from '../StyleUtils';
+import { addTraitEventDispatcher, removeTraitEventDispatcher, sign } from '../MarkupsCoreUtils';
+import { SetStyle } from '../edit-actions/SetStyle';
 
 const av = Autodesk.Viewing;
 
@@ -98,7 +98,7 @@ const av = Autodesk.Viewing;
     proto.creationEnd = function(isCancelling) {
 
         if (!this.creating) {
-            return;
+            return false;
         }
 
         if (this.creationMethod !== this.CREATION_METHOD_CLICK) {
@@ -124,6 +124,7 @@ const av = Autodesk.Viewing;
 
         this.creating = false;
         this.dispatchEvent({ type: MarkupEvents.EVENT_EDITMODE_CREATION_END, creationCancelled: !!isCancelling });
+        return true;
     };
 
     proto.creationCancel = function() {
@@ -281,7 +282,10 @@ const av = Autodesk.Viewing;
     };
 
     proto.onMouseMove = function (event) {
-
+        if (!this.selectedMarkup || !this.creating) {
+            return false;
+        }
+        return true;
     };
 
     proto.onMouseDown = function () {
@@ -298,10 +302,10 @@ const av = Autodesk.Viewing;
     proto.onMouseUp = function(event) {
 
         if (this.creationMethod !== this.CREATION_METHOD_DRAG) {
-            return;
+            return false;
         }
 
-        this.creationEnd();
+        return this.creationEnd();
     };
 
     proto.onMouseDoubleClick = function(event) {

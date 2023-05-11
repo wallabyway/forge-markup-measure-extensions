@@ -1,6 +1,6 @@
 'use strict';
 
-import { isTouchDevice } from '../MarkupsCoreUtils'
+import { isTouchDevice } from '../MarkupsCoreUtils';
 
     var av = Autodesk.Viewing;
     var avp = av.Private;
@@ -91,6 +91,10 @@ import { isTouchDevice } from '../MarkupsCoreUtils'
             this.editor.svg.addEventListener('dblclick', this.onMouseDoubleClickBinded);
             this.editor.svg.addEventListener('wheel', this.onWheelBinded);
             this.editor.svg.addEventListener('DOMMouseScroll', this.onWheelBinded); // Firefox
+            
+            // The mouseup and mousemove listeners are at the document level to handle the case where
+            // mouse was held inside the canvas and released outside. 
+            // When this happens, we don't want the editing to be in a hung state and cancel it
             this.addDocumentEventListener('mousemove', this.onMouseMoveBinded);
             this.addDocumentEventListener('mouseup', this.onMouseUpBinded);
         }
@@ -199,12 +203,14 @@ import { isTouchDevice } from '../MarkupsCoreUtils'
 
         processMouseEvent(this, event);
 
-        if (!av.isMobileDevice()) {
+        if (!av.isMobileDevice() && this.editor.viewer.container.contains(event.target)) {
             this.editor.viewer.toolController.mousemove(event);
         }
 
-        this.editor.onMouseMove(event);
-        event.preventDefault();
+        if (this.editor.onMouseMove(event)) {
+            // editor handled the event
+            event.preventDefault();
+        }
     };
 
 
@@ -249,14 +255,18 @@ import { isTouchDevice } from '../MarkupsCoreUtils'
 
         processMouseEvent(this, event);
 
-        if (!av.isMobileDevice() && (avp.isRightClick(event, this.editor.viewer.navigation) || avp.isMiddleClick(event))) {
+        if (!av.isMobileDevice() && this.editor.viewer.container.contains(event.target) && 
+             (avp.isRightClick(event, this.editor.viewer.navigation) || avp.isMiddleClick(event))
+           ) {
             this.onMouseUpRightClick(event);
             return;
         }
 
         this.isMouseDown = false;
-        this.editor.onMouseUp(event);
-        event.preventDefault();
+        if (this.editor.onMouseUp(event)) {
+            // editor handled the event
+            event.preventDefault();
+        }
     };
 
     proto.onMouseDoubleClick = function(event) {

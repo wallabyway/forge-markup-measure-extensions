@@ -1,9 +1,9 @@
-import { getStyleDefaultValues } from '../core/StyleUtils'
-import * as MarkupEvents from '../core/MarkupEvents' 
-import * as MarkupTypes from '../core/MarkupTypes'
-import { theEditModeManager } from '../core/EditModeManager'
+import { getStyleDefaultValues } from '../core/StyleUtils';
+import * as MarkupEvents from '../core/MarkupEvents';
+import * as MarkupTypes from '../core/MarkupTypes';
+import { theEditModeManager } from '../core/EditModeManager';
 
-import CSS from './MarkupsGui.css' // IMPORTANT!!
+import './MarkupsGui.css'; // IMPORTANT!!
 
     var CORE_EXTENSION = 'Autodesk.Viewing.MarkupsCore';
 
@@ -59,7 +59,6 @@ import CSS from './MarkupsGui.css' // IMPORTANT!!
     proto.onToolbarCreated = function(toolbar) {
         
         var self = this;
-        var viewer = this.viewer;
 
         this.markupToolButton = new Autodesk.Viewing.UI.Button("toolbar-markupTool");
         this.markupToolButton.setToolTip("Markup");
@@ -141,7 +140,6 @@ import CSS from './MarkupsGui.css' // IMPORTANT!!
         if (this.domRoot)
             return;
 
-        var optionIndex = 0;
         function createEditModeOption(locLabel, editModeType) {
             return [
                 '<option value="', editModeType, '">',
@@ -181,6 +179,7 @@ import CSS from './MarkupsGui.css' // IMPORTANT!!
                             createEditModeOption('Freehand', MarkupTypes.MARKUP_TYPE_FREEHAND),
                             createEditModeOption('Highlight', MarkupTypes.MARKUP_TYPE_HIGHLIGHT),
                             createEditModeOption('Dimension', MarkupTypes.MARKUP_TYPE_DIMENSION),
+                            createEditModeOption('SVG Stamp', MarkupTypes.MARKUP_TYPE_STAMP),
                         '</select>',
                         '<br>',
                         '<div class="lmv-markup-gui-style-options"></div>',
@@ -216,6 +215,9 @@ import CSS from './MarkupsGui.css' // IMPORTANT!!
         // Tools
         this.hookEvent('change', '.lmv-markup-tool-select', this.onSelectEditMode.bind(this));
         this.hookEvent('change', '.lmv-markup-gui-style-select', this.onStyleChange.bind(this));
+        // Text input fields for tools
+        this.hookEvent('input', '.lmv-markup-gui-style-textarea', this.onStyleChange.bind(this));
+        this.hookEvent('propertychange', '.lmv-markup-gui-style-textarea', this.onStyleChange.bind(this));
 
         this.setStylesUi(this.core.editMode);
     };
@@ -311,14 +313,20 @@ import CSS from './MarkupsGui.css' // IMPORTANT!!
 
     proto.onStyleChange = function(event) {
         var select = event.target;
-        var option = select.options[select.selectedIndex];
         var styleKey = select.getAttribute('style-key');
         var valueType = select.getAttribute('value-type');
-        select.blur(); // remove focus from UI
-
+        
         var markup = this.core.getSelection();
         var style = markup ? markup.getStyle() : this.core.getStyle();
-        style[styleKey] = getTypedValue(option.value, valueType);
+
+        // if it's a string input, just take the raw value
+        if (valueType === 'string') {
+            style[styleKey] = select.value;
+        } else {
+            var option = select.options[select.selectedIndex];
+            style[styleKey] = getTypedValue(option.value, valueType);
+            select.blur(); // remove focus from UI
+        }
         this.core.setStyle(style);
 
         function getTypedValue(val, type) {
@@ -331,7 +339,6 @@ import CSS from './MarkupsGui.css' // IMPORTANT!!
     };
 
     proto.setStylesUi = function(editMode, markup) {
-        avp.logger.log('set ui for ' + editMode.type);
 
         var style = markup ? markup.style : editMode.style;
         var defaults = getStyleDefaultValues(style, this.core);
@@ -368,24 +375,40 @@ import CSS from './MarkupsGui.css' // IMPORTANT!!
         // TODO: Build specialized controls for each style-attribute
         const _document = this.getDocument();
         var domElem = _document.createElement('div');
-        var html = [
-            '<span>',key,'</span>',
-            '<select class="lmv-markup-gui-style-select" style-key="', key, '" value-type="', valueType,'">',
-                options.join(''),
-            '</select>'
-        ].join('');
+        var html = [];
+        let isText = key.includes('text');
+
+        if (isText) {
+            html = [
+                '<span>',key,'</span>',
+                '<br>',
+                '<textarea class="lmv-markup-gui-style-textarea" style-key="', key, '" value-type="', valueType,'">',
+                (current || ''),
+                '</textarea>'
+            ].join('');
+        } else {
+            html = [
+                '<span>',key,'</span>',
+                '<select class="lmv-markup-gui-style-select" style-key="', key, '" value-type="', valueType,'">',
+                    options.join(''),
+                '</select>'
+            ].join('');
+        }
+        
         domElem.innerHTML = html;
 
-        // select index
-        var domSelect = domElem.querySelector('select');
-        domSelect.selectedIndex = selectionIndex;
+        if (!isText) {
+            // select index
+            var domSelect = domElem.querySelector('select');
+            domSelect.selectedIndex = selectionIndex;
+        }
 
         return domElem;
     };
     proto.valueEquals = function(value1, value2) {
 
         return value1 === value2;
-    }
+    };
 
     proto.setControlVisibility = function(selector, isVisible, visibleValue) {
         var elem = this.domRoot.querySelector(selector);

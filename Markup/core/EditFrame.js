@@ -1,12 +1,12 @@
 'use strict';
 
 import { EDIT_FRAME_DEFAULT_MARGIN, 
-         addTraitEventDispatcher, isTouchDevice, degreesToRadians } from './MarkupsCoreUtils'
-import * as MarkupEvents from './MarkupEvents'
-import { CloneMarkup } from './edit-actions/CloneMarkup'
-import { SetPosition } from './edit-actions/SetPosition'
-import { SetSize } from './edit-actions/SetSize'
-import { SetRotation } from './edit-actions/SetRotation'
+         addTraitEventDispatcher, isTouchDevice, degreesToRadians } from './MarkupsCoreUtils';
+import * as MarkupEvents from './MarkupEvents';
+import { CloneMarkup } from './edit-actions/CloneMarkup';
+import { SetPosition } from './edit-actions/SetPosition';
+import { SetSize } from './edit-actions/SetSize';
+import { SetRotation } from './edit-actions/SetRotation';
 
      var av = Autodesk.Viewing;
      var avp = Autodesk.Viewing.Private;
@@ -284,7 +284,7 @@ import { SetRotation } from './edit-actions/SetRotation'
             }
         } else {
             //no constraints, show all resize handles
-            for (var direction in this.selection.handle) {
+            for (let direction in this.selection.handle) {
                 handle = this.selection.handle[direction];
                 if(handle) handle.style.display = 'block';
             }
@@ -617,10 +617,10 @@ import { SetRotation } from './edit-actions/SetRotation'
         // This check is needed for selecting markups on devices that have touch screen + mouse (eg: Microsoft Surface)
         if (ignoreFirstMouseMove) {
             ignoreFirstMouseMove = false;
-            return;
+            return false;
         }
         //ignore mousemove events if the dragging state hasn't been activated
-        if (!this.selection.dragging || !this.markup || this.markup.preventReposition) return;
+        if (!this.selection.dragging || !this.markup || this.markup.preventReposition) return false;
 
         //get the position of the cursor relative to selection layer
         var cursor = this.editor.getMousePosition();
@@ -670,6 +670,7 @@ import { SetRotation } from './edit-actions/SetRotation'
         var position = this.editor.positionFromClientToMarkups(x, y);
         var setPosition = new SetPosition(this.editor, this.markup, position);
         setPosition.execute();
+        return true;
     };
 
     proto._onRepositionMouseUp = function () {
@@ -743,7 +744,7 @@ import { SetRotation } from './edit-actions/SetRotation'
 
     proto._onResizeMouseMove = function (event) {
 
-        if (!this.selection.resizing) return;
+        if (!this.selection.resizing) return false;
 
         var cursor = this.editor.getMousePosition();
         var initial = this.initial;
@@ -833,6 +834,7 @@ import { SetRotation } from './edit-actions/SetRotation'
 
         var setSize = new SetSize(this.editor, this.markup, newPos, newSize.x, newSize.y);
         setSize.execute();
+        return true;
     };
 
     function setHandleSelected (handle, isSelected) {
@@ -911,7 +913,7 @@ import { SetRotation } from './edit-actions/SetRotation'
      proto._onRotationMouseMove = function (event) {
 
         //ignore mousemove events if the dragging state hasn't been activated
-        if (!this.selection.rotating) return;
+        if (!this.selection.rotating) return false;
 
         var cursor = this.editor.getMousePosition();
         var position = this.markup.getClientPosition();
@@ -932,6 +934,7 @@ import { SetRotation } from './edit-actions/SetRotation'
         //convert to radians
         var setRotation = new SetRotation(this.editor, this.markup, rotation);
         setRotation.execute();
+        return true;
     };
 
     proto._onRotationMouseUp = function (event) {

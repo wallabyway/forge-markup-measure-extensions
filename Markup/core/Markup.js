@@ -1,9 +1,9 @@
 'use strict';
 
 import { addTraitEventDispatcher, renderToCanvas, radiansToDegrees, 
-         checkPolygon, checkLineSegment, isTouchDevice } from './MarkupsCoreUtils'
-import { createStyle, copyStyle, cloneStyle } from './StyleUtils'
-import * as MarkupEvents from './MarkupEvents'
+         checkPolygon, checkLineSegment, isTouchDevice } from './MarkupsCoreUtils';
+import { createStyle, copyStyle, cloneStyle } from './StyleUtils';
+import * as MarkupEvents from './MarkupEvents';
 
     var av = Autodesk.Viewing;
 
@@ -99,14 +99,14 @@ import * as MarkupEvents from './MarkupEvents'
 
         for (var name in this) {
 
-            if(!this.hasOwnProperty(name)) {
+            if(!Object.prototype.hasOwnProperty.call(this, name)) {
                 continue;
             }
 
             var member = this[name];
 
             // Is there an override for this member?
-            if (overrides.hasOwnProperty(name)) {
+            if (Object.prototype.hasOwnProperty.call(overrides, name)) {
                 clone[name] = overrides[name];
                 continue;
             }
@@ -178,7 +178,7 @@ import * as MarkupEvents from './MarkupEvents'
             editor: this.editor,
             hammer: null,
             listeners: {}
-        }
+        };
     };
 
     /**

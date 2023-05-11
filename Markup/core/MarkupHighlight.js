@@ -1,8 +1,8 @@
 'use strict';
 
-import { MarkupPen } from './MarkupPen'
-import * as MarkupTypes from './MarkupTypes'
-import { EditModeHighlight } from './edit-modes/EditModeHighlight'
+import { MarkupPen } from './MarkupPen';
+import * as MarkupTypes from './MarkupTypes';
+import { EditModeHighlight } from './edit-modes/EditModeHighlight';
 
     /**
      *

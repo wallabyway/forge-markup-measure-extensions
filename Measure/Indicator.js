@@ -26,6 +26,8 @@
         this.materialFace = null;
         this.angleArc = null;
         this.angleOutline = [];
+        this.arcOutline = [];
+        this.arcTip = [];
         this.showMeasureResult = false;
         this.visibleLabels = [];
         this.overlayName = 'measure-indicator-overlay-' + (measurement.id || '');
@@ -59,13 +61,14 @@
         return false;
     };
 
-    proto.renderFromPoints = function(points, showMeasureResult) {
+    proto.renderFromPoints = function(pointData, showMeasureResult) {
         this.showMeasureResult = showMeasureResult;
 
         this.clear();
 
-        for (var i = 1; i <= Object.keys(points).length; i++) {
-            const p = points[i];
+        for (var i = 1; i <= Object.keys(pointData).length; i++) {
+            const p = pointData[i].intersection;
+    
             if (!this.endpoints[i]) {
                 this.createEndpoint(i);
             }
@@ -74,7 +77,7 @@
             this.showClick(i);
         }
             
-        this.renderRubberbandFromPoints(points);
+        this.renderRubberbandFromPoints(pointData);
         
         this.updateLabelsPosition();
     };
@@ -120,7 +123,7 @@
     proto.clientToCanvasCoords = function(event) {
         var rect = this.viewer.impl.getCanvasBoundingClientRect();
         var res = {};
-        if( event.hasOwnProperty("center") )
+        if(Object.prototype.hasOwnProperty.call(event, "center"))
         {
             event.canvasX = res.x = event.center.x - rect.left;
             event.canvasY = res.y = event.center.y - rect.top;
@@ -221,7 +224,7 @@
 
     proto.hideEndpoints = function() {
         for (var name in this.endpoints) {
-            if (this.endpoints.hasOwnProperty(name)) {
+            if (Object.prototype.hasOwnProperty.call(this.endpoints, name)) {
                 var endpoint = this.endpoints[name];
                 if (endpoint.label) {
                     this.hideLabel(endpoint.label);
@@ -232,7 +235,7 @@
 
     proto.showEndpoints = function() {
         for (var name in this.endpoints) {
-            if (this.endpoints.hasOwnProperty(name)) {
+            if (Object.prototype.hasOwnProperty.call(this.endpoints, name)) {
                 var endpoint = this.endpoints[name];
                 if (this.measurement.hasPick(name) && endpoint.label) {
                     this.showLabel(endpoint.label);
@@ -269,7 +272,7 @@
 
     proto.changeAllEndpointsEditableStyle = function(isEditable) {
         for (var name in this.endpoints) {
-            if (this.endpoints.hasOwnProperty(name)) {
+            if (Object.prototype.hasOwnProperty.call(this.endpoints, name)) {
                 this.changeEndpointEditableStyle(name, isEditable);    
             }
         }
@@ -277,7 +280,7 @@
 
     proto.changeAllEndpointsOnEditStyle = function(isEditing) {
         for (var name in this.endpoints) {
-            if (this.endpoints.hasOwnProperty(name)) {
+            if (Object.prototype.hasOwnProperty.call(this.endpoints, name)) {
                 this.changeEndpointOnEditStyle(name, isEditing);
             }
         }
@@ -336,7 +339,6 @@
         }
     };
 
-
     // This is a workaround to deal with the limitation on linewidth on Windows due to the ANGLE library
     proto.drawEdgeAsCylinder = function(geom, material, linewidth, type, cylinderGeometry) {
 
@@ -344,17 +346,25 @@
         var edge = [];
         var cylinder;
 
+        const position = geom.getAttribute('position');
+        const v0 = new THREE.Vector3();
+        const v1 = new THREE.Vector3();
+
         if (type == 1) { // LinePieces
-            for (var i = 0; i < geom.vertices.length; i += 2) {
-                cylinder = this.cylinderMesh(geom.vertices[i], geom.vertices[i + 1], material, linewidth, cylinderGeometry);
-                this.setCylinderScale(cylinder, geom.vertices[i], geom.vertices[i + 1]);
+            for (let i = 0; i < position.count; i += 2) {
+                v0.fromBufferAttribute(position, i);
+                v1.fromBufferAttribute(position, i + 1);
+                cylinder = this.cylinderMesh(v0, v1, material, linewidth, cylinderGeometry);
+                this.setCylinderScale(cylinder, v0, v1);
                 edge.push(cylinder);
             }
         }
         else { // LineStrip
-            for (var i = 0; i < geom.vertices.length - 1; i++) {
-                cylinder = this.cylinderMesh(geom.vertices[i], geom.vertices[i + 1], material, linewidth, cylinderGeometry);
-                this.setCylinderScale(cylinder, geom.vertices[i], geom.vertices[i + 1]);
+            for (let i = 0; i < position.count - 1; i++) {
+                v0.fromBufferAttribute(position, i);
+                v1.fromBufferAttribute(position, i + 1);
+                cylinder = this.cylinderMesh(v0, v1, material, linewidth, cylinderGeometry);
+                this.setCylinderScale(cylinder, v0, v1);
                 edge.push(cylinder);
             }
         }
@@ -365,34 +375,33 @@
 
     proto.drawDashedLine = function(p1, p2, dashSize, gapSize, material, width, overlayName) {
 
-        var geometry = new THREE.Geometry();
+        const geometry = new THREE.BufferGeometry();
         var line = new THREE.Vector3().subVectors(p2, p1);
         var lineLength = line.length() - gapSize;
         var lineDirection = line.normalize();
         
-        var i = 0;
         var pos = p1.clone();
         var currLength = 0;
 
+        const points = [];
         while (currLength < lineLength) {
             var isPointVisible = this.viewer.navigation.isPointVisible(pos);
             
             if (isPointVisible) {
-                geometry.vertices[i] = pos.clone();
-                i++;
+                points.push(pos.clone());
             }
             
             pos.addVectors(pos, lineDirection.clone().multiplyScalar(dashSize));
             
             if (isPointVisible) {
-                geometry.vertices[i] = pos.clone();
-                i++;
+                points.push(pos.clone());
             }
             
             pos.addVectors(pos, lineDirection.clone().multiplyScalar(gapSize));
 
             currLength += dashSize + gapSize;
         }
+        geometry.setFromPoints(points);
         
         line = this.drawEdgeAsCylinder(geometry, material, width, 1, this.getNewCylinderGeometry());
         this.viewer.impl.addMultipleOverlays(overlayName, line);
@@ -405,9 +414,12 @@
 
         var line;
 
-        if (geom.vertices.length == 2) {
-            line = this.cylinderMesh(geom.vertices[0], geom.vertices[1], material, linewidth, this.getNewCylinderGeometry());
-            this.setCylinderScale(line, geom.vertices[0], geom.vertices[1]);
+        const position = geom.getAttribute('position');
+        if (position.count == 2) {
+            const p0 = new THREE.Vector3().fromBufferAttribute(position, 0);
+            const p1 = new THREE.Vector3().fromBufferAttribute(position, 1);
+            line = this.cylinderMesh(p0, p1, material, linewidth, this.getNewCylinderGeometry());
+            this.setCylinderScale(line, p0, p1);
             this.viewer.impl.addOverlay(overlayName, line);
         }
 
@@ -430,7 +442,7 @@
             0, 0, 0, 1));
 
         var edge = new THREE.Mesh(cylinderGeometry, material);
-        edge.applyMatrix(orientation);
+        edge.applyMatrix4(orientation);
         edge.lmv_line_width = linewidth;
         edge.position.x = (pointY.x + pointX.x) / 2;
         edge.position.y = (pointY.y + pointX.y) / 2;
@@ -450,7 +462,7 @@
             scale = this.setScale(cylinderMesh.position);
         }
 
-        if (cylinderMesh.hasOwnProperty("lmv_line_width"))
+        if (Object.prototype.hasOwnProperty.call(cylinderMesh, "lmv_line_width"))
             scale *= cylinderMesh.lmv_line_width;
         cylinderMesh.scale.x = scale;
         cylinderMesh.scale.z = scale;
@@ -519,7 +531,7 @@
         }
 
         for (var name in this.endpoints) {
-            if (this.endpoints.hasOwnProperty(name)) {
+            if (Object.prototype.hasOwnProperty.call(this.endpoints, name)) {
                 var endPoint = this.endpoints[name];
 
                 if (endPoint.label) {
@@ -534,27 +546,49 @@
         this.visibleLabels = [];
     };
 
-    proto.renderRubberbandFromPoints = function(points) {
+    proto.renderRubberbandFromPoints = function(pointData) {
+        const keys = Object.keys(pointData);
+        const intersectionPoints = [];
+        for (let i = 0; i < keys.length; i++) {
+            intersectionPoints.push(pointData[keys[i]].intersection);
+        }
         switch (this.measurement.measurementType) {
             case MeasureCommon.MeasurementTypes.MEASUREMENT_DISTANCE:
-                var start = points[1];
-                var end = points[2];
-                
+                var start = pointData[1].intersection;
+                var end = pointData[2].intersection;
                 if (start && end) {
                     this.renderDistanceMeasurementFromPoints(start, end);
                 }
                 break;
 
             case MeasureCommon.MeasurementTypes.MEASUREMENT_ANGLE:
-                this.renderAngleMeasurementFromPoints(points);
+                this.renderAngleMeasurementFromPoints(intersectionPoints);
                 break;
 
             case MeasureCommon.MeasurementTypes.MEASUREMENT_AREA:
-                this.renderAreaMeasurementFromPoints(points);
+                this.renderAreaMeasurementFromPoints(intersectionPoints);
                 break;
-        }
 
-    }
+            case MeasureCommon.MeasurementTypes.MEASUREMENT_ARC: {
+                const p1 = pointData[1].intersection;
+                const p2 = pointData[2].intersection;
+                const center = pointData[1].circularArcCenter;
+                const radius = pointData[1].circularArcRadius;
+                // Render the arc measurement from the intersection points, center and radius.
+                this.renderArcMeasurementFromPoints(p1, p2, center, radius);
+                break;
+            }
+
+            case MeasureCommon.MeasurementTypes.MEASUREMENT_LOCATION:
+                this.renderLocationMeasurementFromPoints(intersectionPoints);
+                break;
+
+            case MeasureCommon.MeasurementTypes.MEASUREMENT_CALLOUT:
+                this.renderCalloutMeasurementFromPoints(intersectionPoints);
+                break;
+            }
+
+    };
 
     proto.renderRubberband = function(picks) {
 
@@ -577,7 +611,25 @@
             case MeasureCommon.MeasurementTypes.MEASUREMENT_AREA:
                 this.renderAreaMeasurement(picks);
                 break;
-        }
+
+            case MeasureCommon.MeasurementTypes.MEASUREMENT_ARC: {
+                let previewsPick = picks[1];
+                let activePick = picks[2];
+                
+                if (previewsPick && activePick) {
+                    this.renderArcMeasurement(previewsPick, activePick);
+                }
+                break;
+            }
+
+            case MeasureCommon.MeasurementTypes.MEASUREMENT_LOCATION:
+                this.renderLocationMeasurement(picks);
+                break;
+
+            case MeasureCommon.MeasurementTypes.MEASUREMENT_CALLOUT:
+                this.renderCalloutMeasurement(picks);
+                break;
+            }
     };
 
     proto.initMouseEvent = function(label, pointNumber) {

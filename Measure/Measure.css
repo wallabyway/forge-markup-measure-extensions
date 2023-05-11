@@ -17,7 +17,7 @@
 
     padding: 2px 0 2px 0;
 
-    background-color: #009bff;
+    background-color: #009bea;
     box-shadow: 0px 1px 3px 1px rgba(0,0,0,0.25);
 
     color: #f4f4f4;
@@ -123,7 +123,7 @@
     height: 7px;
     left: -2px;
     top: -2px;
-    background-color: #009bff;
+    background-color: #009bea;
     border-style: solid;
     border-width: 2px;
     border-color: #FFFFFF;
@@ -426,15 +426,15 @@
 }
 
 .adsk-viewing-viewer .measure-label-axis-icon.X {
-    background-color: #EC4545;
+    background-color: #F12C2C;
 }
 
 .adsk-viewing-viewer .measure-label-axis-icon.Y {
-    background-color: #45C345;
+    background-color: #0BB80B;
 }
 
 .adsk-viewing-viewer .measure-label-axis-icon.Z {
-    background-color: #5757DA;
+    background-color: #2C2CF1;
 }
 
 .adsk-viewing-viewer .measure-label-axis-icon {
@@ -446,6 +446,7 @@
     padding-top: 4px;
     line-height: 15px;
     text-align: center;
+    margin-left: -2px;
 }
 
 /* hover shouldn't work on mobile devices */
@@ -479,15 +480,15 @@
 }
 
 .adsk-viewing-viewer .measure-label-axis-x {
-    color: #EC4545;
+    color: #F12C2C;
 }
 
 .adsk-viewing-viewer .measure-label-axis-y {
-    color: #45C345;
+    color: #0BB80B;
 }
 
 .adsk-viewing-viewer .measure-label-axis-z {
-    color: #5757DA;
+    color: #2C2CF1;
 }
 
 
@@ -594,4 +595,13 @@
 	cursor: pointer;
 	z-index: 1;
 	-webkit-tap-highlight-color: rgba(0,0,0,0);
+}
+
+.adsk-viewing-viewer .adsk-toolbar.adsk-toolbar-vertical .adsk-label-button {
+    padding: 0px;
+    width: 40px;
+}
+
+.adsk-viewing-viewer .adsk-toolbar.adsk-toolbar-vertical .adsk-label-button > label {
+    padding: 10px 0px;
 }

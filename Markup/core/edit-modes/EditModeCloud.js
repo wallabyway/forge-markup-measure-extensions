@@ -1,10 +1,10 @@
 'use strict';
 
-import { EditMode } from './EditMode'
-import { DeleteCloud } from '../edit-actions/DeleteCloud'
-import { CreateCloud } from '../edit-actions/CreateCloud'
-import { SetCloud } from '../edit-actions/SetCloud'
-import * as MarkupTypes from '../MarkupTypes'
+import { EditMode } from './EditMode';
+import { DeleteCloud } from '../edit-actions/DeleteCloud';
+import { CreateCloud } from '../edit-actions/CreateCloud';
+import { SetCloud } from '../edit-actions/SetCloud';
+import * as MarkupTypes from '../MarkupTypes';
 
     /**
      *
@@ -41,12 +41,11 @@ import * as MarkupTypes from '../MarkupTypes'
      */
     proto.onMouseMove = function(event) {
 
-        EditMode.prototype.onMouseMove.call( this, event );
+        if (!EditMode.prototype.onMouseMove.call( this, event )) {
+            return false;
+        }
 
         var selectedMarkup = this.selectedMarkup;
-        if(!selectedMarkup || !this.creating) {
-            return;
-        }
 
         var editor = this.editor;
 
@@ -61,6 +60,7 @@ import * as MarkupTypes from '../MarkupTypes'
             size);
 
         setCloud.execute();
+        return true;
     };
 
     /**

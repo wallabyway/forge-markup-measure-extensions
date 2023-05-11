@@ -250,7 +250,6 @@ function update(ta) {
 
 function isRuntimeSupported() {
     // Don't support Node.js and IE8 (or lower)
-    const _window = Autodesk.Viewing.getGlobal();
     if (typeof window === 'undefined' || typeof window.getComputedStyle !== 'function')
         return false;
     return true;
@@ -274,11 +273,11 @@ autosize.destroy = function(el) {
         Array.prototype.forEach.call(el.length ? el : [el], destroy);
     }
     return el;
-}
+};
 
 autosize.update = function(el) {
     if (RUNTIME_SUPPORTED && el) {
         Array.prototype.forEach.call(el.length ? el : [el], update);
     }
     return el;
-}
+};

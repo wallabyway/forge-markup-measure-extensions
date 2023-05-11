@@ -1,0 +1,13 @@
+{
+  "name": "@adsk/markupscore",
+  "version": "1.0.0",
+  "description": "core library for Markup class",
+  "main": "./MarkupsCore.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "peerDependencies": {
+    "resize-observer-polyfill": "^1.5.1"
+  },
+  "private": true
+}

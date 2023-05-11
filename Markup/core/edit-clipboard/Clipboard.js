@@ -1,7 +1,7 @@
 'use strict';
 
-import { CloneMarkup } from '../edit-actions/CloneMarkup'
-import { addTraitEventDispatcher } from '../MarkupsCoreUtils'
+import { CloneMarkup } from '../edit-actions/CloneMarkup';
+import { addTraitEventDispatcher } from '../MarkupsCoreUtils';
 
     /**
      *

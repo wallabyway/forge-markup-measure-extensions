@@ -1,7 +1,9 @@
-import { MeasurementsManager } from './MeasurementsManager'
-import { MeasureToolIndicator } from './MeasureToolIndicator'
+import { MeasurementsManager } from './MeasurementsManager';
+import { MeasureToolIndicator } from './MeasureToolIndicator';
+import { SET_MOUSE_TRACKING } from './EventTypes';
 
 const av = Autodesk.Viewing;
+const avp = Autodesk.Viewing.Private;
 
 //
 // /** @constructor */
@@ -10,7 +12,6 @@ const av = Autodesk.Viewing;
 export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
 {
     var _viewer  = viewer;
-    var _options = options || {};
     var _names  = ["measure"];
     var _priority = 50;
 
@@ -20,7 +21,6 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
     var _sharedMeasureConfig = sharedMeasureConfig;
 
     var av = Autodesk.Viewing;
-    var avem = Autodesk.Viewing.Extensions.Measure;
     var MeasureCommon = Autodesk.Viewing.MeasureCommon;
     
     // Not shared with Indicator.js
@@ -37,7 +37,10 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
     var _measurementsManager = new MeasurementsManager(_viewer);
     var _currentMeasurement = null;
     var _onIndicatorCreatedCB = null;
-    
+    var _fetchingMeasurements = [];
+    var _prevMeasurement = null;
+    var _useLastViewport = false;
+
     var _cursor = "url(data:image/png;base64,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), auto";
 
     // Snapper
@@ -52,10 +55,11 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
     var _preMeasureState = null;
 
     var _measurementType = MeasureCommon.MeasurementTypes.MEASUREMENT_DISTANCE;
+    var _firstMeasurementTypeChange = true;
 
     var _sessionMeasurements = null;
 
-    function getActivePick()
+    this.getActivePick = function()
     {   
         if(!_currentMeasurement)
             return null;
@@ -71,9 +75,9 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         }
 
         return _currentMeasurement.getPick(index);
-    }
+    };
 
-    function getPreviousPick()
+    this.getPreviousPick = function()
     {
         if(!_currentMeasurement)
             return null;
@@ -91,9 +95,9 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         }
         
         return _currentMeasurement.getPick(index);
-    }
+    };
 
-    function hasPreviousPick()
+    this.hasPreviousPick = function()
     {
         if(!_currentMeasurement)
             return false;
@@ -111,21 +115,28 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         }
         
         return _currentMeasurement.hasPick(index);
-    }
+    };
 
-    function noPicksSet() {
+    this.noPicksSet = function() {
         _activePoint = 0;
-    }
+    };
 
-    function allPicksSet() {
+    this.allPicksSet = function() {
         _activePoint = _currentMeasurement.countPicks() + 1;
         enableMeasurementsTouchEvents(true);
         _currentMeasurement.indicator.enableSelectionAreas(true);
-    }
+        
+        // Keep track of the previous measurement
+        _prevMeasurement = _currentMeasurement.clone();
+        _viewer.dispatchEvent({
+            type: MeasureCommon.Events.MEASUREMENT_COMPLETED_EVENT,
+            data: { type: _currentMeasurement.measurementType, id: _currentMeasurement.id }
+        });
+    };
 
-    function isNoPicksSet() {
+    this.isNoPicksSet = function() {
         return _activePoint === 0 || !_currentMeasurement;
-    }
+    };
 
     this.areAllPicksSet = function() {
         return _currentMeasurement && (_activePoint === _currentMeasurement.getMaxNumberOfPicks() + 1);
@@ -181,10 +192,38 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
     this.getActivePointIndex = function() {
         return _activePoint;
     };
+    
+    this.setActivePointIndex = function(index) {
+        _activePoint = index;
+    };
 
     this.getMeasurementsManager = function() {
         return _measurementsManager;
-    }
+    };
+
+    this.shouldConsumeSingleClick = function() {
+        return _consumeSingleClick;
+    };
+
+    this.setConsumeSingleClick = function(bo) {
+        _consumeSingleClick = bo;
+    };
+
+    this.isSingleClickHandled = function() {
+        return _singleClickHandled;
+    };
+    
+    this.setSingleClickHandled = function(bo) {
+        _singleClickHandled = bo;
+    };
+
+    this.isPressing = function() {
+        return _isPressing;
+    };
+
+    this.setIsPressing = function(bo) {
+        _isPressing = bo;
+    };
 
 
     this.startNewMeasurement = function() {
@@ -199,16 +238,33 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         enableMeasurementsTouchEvents(false);
     };
 
-    this.changeMeasurementType = function(type) {
+    this.changeMeasurementType = function (type) {
+        // Since the initial _measurementType is set to MEASUREMENT_DISTANCE, and we still want to track analytics
+        // when initially entering here with the distance tool, there is a need in this _firstMeasurementTypeChange flag.
+        if (type === _measurementType && !_firstMeasurementTypeChange) {
+            return;
+        }
+
         _measurementType = type;
+        _firstMeasurementTypeChange = false;
+
+        avp.analytics.track('viewer.measure', {
+            action: 'Enabled',
+            type: MeasureCommon.MeasurementTypesToAnalytics[_measurementType],
+        });
+    };
+
+    this.getCurrentMeasureType = function() {
+        return _measurementType;
     };
 
     this.activate = function()
     {
         _active = true;
+        _firstMeasurementTypeChange = true;
         _measurementsManager.init();
 
-        noPicksSet();
+        this.noPicksSet();
         _isDragging = false;
         this.isEditingEndpoint = false;
         this.editByDrag = false;
@@ -231,6 +287,7 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
        if (restoreSessionMeasurements) {
            const sessionMeasurements = this.getSessionMeasurements();
            this.setMeasurements(sessionMeasurements);
+           this.isolateMeasurement();
        }
     };
 
@@ -239,9 +296,17 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         if (!_active)
             return;
 
+        _viewer.dispatchEvent({ type: SET_MOUSE_TRACKING, mode: 'end' });
+
+        avp.analytics.track('viewer.measure', {
+            action: 'Disabled',
+            type: MeasureCommon.MeasurementTypesToAnalytics[_measurementType],
+        });
+
         // Store the session measurements only if the preference is enabled
         const restoreSessionMeasurements = _viewer.prefs.get(av.Private.Prefs.RESTORE_SESSION_MEASUREMENTS);
         if (restoreSessionMeasurements) {
+            this.clearIncompleteMeasurement();
             const measurementList = this.getMeasurementList();
             this.setSessionMeasurements(measurementList);
         }
@@ -250,6 +315,9 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         
         this.clearIsolate(); // restore initial isolation
         _preMeasureState = null;
+
+        _prevMeasurement = null;
+        _useLastViewport = false;
 
         while (Object.keys(_measurementsManager.measurementsList).length > 0) {
             _currentMeasurement = _measurementsManager.measurementsList[Object.keys(_measurementsManager.measurementsList)[0]];
@@ -272,6 +340,16 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         _viewer.removeEventListener(av.SHOW_ALL_EVENT, this.onShowAllEvent);
     };
 
+    this.clearIncompleteMeasurement = function() {
+        if (!this.areAllPicksSet()) {
+            if (this.isEditingEndpoint) {
+                this.undoEditEndpoint();
+            } else {
+                this.clearCurrentMeasurement();
+            }
+        }
+    };
+
     this.update = function()
     {
         return false;
@@ -285,10 +363,9 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
     {
         if (_sharedMeasureConfig.units !== units ) {
             _sharedMeasureConfig.units = units;
-            _viewer.dispatchEvent({ type: MeasureCommon.Events.DISPLAY_UNITS_CHANGED, units: units});
 
             for (var key in _measurementsManager.measurementsList) {
-                if (_measurementsManager.measurementsList.hasOwnProperty(key)) {
+                if (Object.prototype.hasOwnProperty.call(_measurementsManager.measurementsList, key)) {
                     // Update UI
                     var measurement = _measurementsManager.measurementsList[key];
                     if (measurement.indicator) {
@@ -304,12 +381,14 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
     };
 
     this.setPrecision = function( precision ) {
+        if (!Number.isInteger(precision) || precision < 0)
+            return;
 
         if (_sharedMeasureConfig.precision !== precision ) {
             _sharedMeasureConfig.precision = precision;
 
             for (var key in _measurementsManager.measurementsList) {
-                if (_measurementsManager.measurementsList.hasOwnProperty(key)) {
+                if (Object.prototype.hasOwnProperty.call(_measurementsManager.measurementsList, key)) {
                     // Update UI
                     var measurement = _measurementsManager.measurementsList[key];
                     if (measurement.indicator) {
@@ -332,55 +411,77 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
             const pick = picks[i];
 
             let pickPoint = MeasureCommon.getSnapResultPosition(pick, _viewer);
-            const model = pick.hasOwnProperty('modelId') && pick.modelId ? _viewer.impl.findModel(pick.modelId) : _viewer.model;
+            const model = Object.prototype.hasOwnProperty.call(pick, 'modelId') && pick.modelId ? _viewer.impl.findModel(pick.modelId) : _viewer.model;
             if (model) {
                 const modelData = model.getData();
-                pickPoint = modelData && modelData.hasOwnProperty('globalOffset') ? pickPoint.clone().sub(modelData.globalOffset) : pickPoint.clone();
+                pickPoint = modelData && Object.prototype.hasOwnProperty.call(modelData, 'globalOffset') ? pickPoint.clone().add(modelData.globalOffset) : pickPoint.clone();
             }
 
             const pickData = {
                 intersection: JSON.parse(JSON.stringify(pickPoint)),
                 modelId: pick.modelId,
-                viewportIndex2d: pick.viewportIndex2d
+                viewportIndex2d: pick.viewportIndex2d,
+                snapNode: pick.snapNode
             };
+
+            // Add the arc center and arc radius for the measurement
+            if (measurement.arc) {
+                pickData.circularArcCenter = pick.circularArcCenter;
+                pickData.circularArcRadius = pick.circularArcRadius;
+            }
+
             picksData.push(pickData);
         }
 
         return picksData;
-    };
+    }
 
     this.getDistanceXYZ = function(measurement) {
         if (!measurement) {
             measurement = _currentMeasurement;
         }
-        return this.getDistanceAux(measurement.distanceXYZ);
+        return this.getDistanceAux(measurement.distanceXYZ, measurement.result?.units);
     };
     this.getDistanceX = function(measurement) {
         if (!measurement) {
             measurement = _currentMeasurement;
         }
-        return this.getDistanceAux(measurement.distanceX);
+        return this.getDistanceAux(measurement.distanceX, measurement.result?.units);
     };
     this.getDistanceY = function(measurement) {
         if (!measurement) {
             measurement = _currentMeasurement;
         }
-        return this.getDistanceAux(measurement.distanceY);
+        return this.getDistanceAux(measurement.distanceY, measurement.result?.units);
     };
     this.getDistanceZ = function(measurement) {
         if (!measurement) {
             measurement = _currentMeasurement;
         }
-        return this.getDistanceAux(measurement.distanceZ);
+        return this.getDistanceAux(measurement.distanceZ, measurement.result?.units);
     };
 
     /**
+     * Returns a formatted string for the given distance. The used unit is determined by the model, calibration or
+     * optional viewport unit.
+     * @param {number} measurementDistance
+     * @param {string} [viewportUnits] - Unit string of the viewport that was measured in. Can differ from mode unit.
+     * @returns {string} Distance converted and formatted to the desired unit.
+     * 
      * @private
      */
-    this.getDistanceAux = function (measurementDistance) {
+    this.getDistanceAux = function (measurementDistance, viewportUnits) {
 
         if (_viewer.model) {
-            var d = Autodesk.Viewing.Private.convertUnits(_viewer.model.getUnitString(), _sharedMeasureConfig.units, _sharedMeasureConfig.calibrationFactor, measurementDistance || 0);
+            let units = _viewer.model.getUnitString();
+
+            // In case the viewport, we measured in, defines its own units, use those instead
+            // Caveat: We can do this only for SmartPdfs coming from DS as otherwise the model unit string might not match the
+            // transform stored in the viewport
+            if (_sharedMeasureConfig.useViewportInfo && viewportUnits && _sharedMeasureConfig.calibrationFactor === null)
+                units = viewportUnits;
+                
+            const d = Autodesk.Viewing.Private.convertUnits(units, _sharedMeasureConfig.units, _sharedMeasureConfig.calibrationFactor, measurementDistance || 0);
             return Autodesk.Viewing.Private.formatValueWithUnits(d, _sharedMeasureConfig.units, 3, _sharedMeasureConfig.precision);
         }
     };
@@ -392,6 +493,39 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         }
         var angle = measurement.angle;
         return Autodesk.Viewing.Private.formatValueWithUnits(angle, String.fromCharCode(0xb0), 3, _sharedMeasureConfig.precision);
+    };
+
+    this.getArc = function(measurement) {
+
+        if (!measurement) {
+            measurement = _currentMeasurement;
+        }
+        let units = _viewer.model.getUnitString();
+
+        var arc = measurement.arc;
+        const arcConverted = Autodesk.Viewing.Private.convertUnits(units, _sharedMeasureConfig.units, _sharedMeasureConfig.calibrationFactor, arc || 0);
+
+        return Autodesk.Viewing.Private.formatValueWithUnits(arcConverted, _sharedMeasureConfig.units, 3, _sharedMeasureConfig.precision);
+    };
+
+
+    this.getLocation = function(measurement) {
+
+        if (!measurement) {
+            measurement = _currentMeasurement;
+        }
+        var location = measurement.location || { x: 0, y: 0, z: 0};
+        return 'X: ' + this.getDistanceAux(location.x) +
+            '\nY: ' + this.getDistanceAux(location.y) +
+            '\nZ: ' + this.getDistanceAux(location.z);
+    };
+
+    this.getCallout = function(measurement) {
+
+        if (!measurement) {
+            measurement = _currentMeasurement;
+        }
+        return measurement.text || "";
     };
 
     this.getArea = function(measurement) { 
@@ -413,7 +547,7 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         }
     };
 
-    function snapToFirstPick(currentPick, forceSnap) {
+    this.snapToFirstPick = function(currentPick, forceSnap) {
         if (_currentMeasurement.hasPick(1) && _activePoint > 3 && !_currentMeasurement.closedArea) {
             var firstPick = _currentMeasurement.getPick(1);
             var firstPickPoint = MeasureCommon.getSnapResultPosition(firstPick, _viewer);
@@ -426,15 +560,60 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
                 firstPick.copyTo(currentPick);
             }
         }
+    };
+
+    function checkSnapperIndicatorForArc() {
+        if(!_currentMeasurement) {
+            _snapper.setArc(true);
+        }
+
+        if (_currentMeasurement?.measurementType === MeasureCommon.MeasurementTypes.MEASUREMENT_ARC && viewer.model.is2d()) {
+            var firstPick = _currentMeasurement && _currentMeasurement.getPick(1);
+            var secondPick = _currentMeasurement && _currentMeasurement.hasPick(2) && _currentMeasurement.getPick(2);
+            const isArc = !firstPick || _currentMeasurement.countPicks().length > 2 || (MeasureCommon.isEqualVectors(firstPick.circularArcCenter, secondPick.circularArcCenter, 0) && firstPick.circularArcRadius === secondPick.circularArcRadius);
+            _snapper.setArc(isArc);
+        }
     }
 
-    function render(showResult) {
+    /**
+     * Overrides each pick's viewportIndex2d in the current measurement with the passed in viewportIndex.
+     * This function only overrides the viewport index if the current measurement's picks do not have the viewportIndex2d set.
+     * (unless forceOverride is true)
+     */
+    function setMeasurePicksViewport(viewportIndex, forceOverride) {
+        const picks = _currentMeasurement.picks;
+        for (var key in picks) {
+            if (Object.prototype.hasOwnProperty.call(picks, key)) {
+                // If the current measurement has a viewport index do not override the its picks viewport id with the previous measurement's.
+                if (picks[key].viewportIndex2d && !forceOverride) {
+                    return;
+                }
+                picks[key].viewportIndex2d = viewportIndex;
+            }
+        }
+    }
+
+    this.render = function(showResult) {
+        if (this.isCalibrationSetOnPage()) {
+            setMeasurePicksViewport(0, true);
+        } else if (_useLastViewport && _prevMeasurement && _prevMeasurement.picks.length > 0) {
+            // LMV-5498: Set the current measurement's picks viewport to the previous measurement's picks viewport.
+            setMeasurePicksViewport(_prevMeasurement.picks[0].viewportIndex2d);
+        }
 
         var hasResult = _currentMeasurement.computeResult(_currentMeasurement.picks, _viewer, _snapper);
         _currentMeasurement.indicator.render(_currentMeasurement.picks, _consumeSingleClick || !!showResult);
 
         return hasResult;
-    }
+    };
+
+    this.setUseLastViewport = function(value) {
+        _useLastViewport = value;
+    };
+
+    this.getUseLastViewport = function() {
+        return _useLastViewport;
+    };
 
     /**
      * Sets existing measurements from the passed in measurement list. Reference getMeasurementList.
@@ -459,6 +638,15 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
                 case 'Area':
                     measurementType = MeasureCommon.MeasurementTypes.MEASUREMENT_AREA;
                     break;
+                case 'Arc':
+                    measurementType = MeasureCommon.MeasurementTypes.MEASUREMENT_ARC;
+                    break;
+                case 'Location':
+                    measurementType = MeasureCommon.MeasurementTypes.MEASUREMENT_LOCATION;
+                    break;
+                case 'Callout':
+                    measurementType = MeasureCommon.MeasurementTypes.MEASUREMENT_CALLOUT;
+                    break;
                 default:
                     return;
             }
@@ -468,14 +656,8 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         // Restore the supplied measurementList.
         for (let i = 0; i < measurementList.length; i++) {
             const measureData = measurementList[i];
-
-            const unitType = measureData.unitType;
-            const precision = measureData.precision;
             const measurementType = getMeasureType(measureData);
             if (!measurementType) continue;
-
-            this.setUnits(unitType);
-            this.setPrecision(precision);
 
             const attachIndicatorCb = (measurement) => {
                 _currentMeasurement = measurement; // _currentMeasurement needs to be set for the onMeasurementChanged to work
@@ -494,9 +676,6 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
                 const points = restoredMeasurements[_currentMeasurement.id];
                 _activePoint = points.length;
             };
-
-            measureData.sharedUnits = _sharedMeasureConfig.units;
-            measureData.sharedCalibrationFactor = _sharedMeasureConfig.calibrationFactor;
 
             _measurementsManager.createMeasurementFromData(
                 measureData,
@@ -522,6 +701,12 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
                 return 'Area';
             case types.CALIBRATION:
                 return 'Calibration';
+            case types.MEASUREMENT_ARC:
+                return 'Arc';
+            case types.MEASUREMENT_LOCATION:
+                return 'Location';
+            case types.MEASUREMENT_CALLOUT:
+                return 'Callout';
             default:
                 return;
         }
@@ -535,6 +720,9 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
      * @returns {Object}
      */
     this.getMeasurement = function(unitType, precision) {
+        if (! _currentMeasurement) {
+            return null;
+        }
 
         _sharedMeasureConfig.units = unitType || _sharedMeasureConfig.units;
         _sharedMeasureConfig.precision = precision || _sharedMeasureConfig.precision;
@@ -551,6 +739,9 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
             deltaZ: this.getDistanceZ(),
             angle: this.getAngle(),
             area: this.getArea(),
+            arc: this.getArc(),
+            location: this.getLocation(),
+            text: this.getCallout(),
             unitType: _sharedMeasureConfig.units,
             precision: _sharedMeasureConfig.precision,
             picks,
@@ -594,10 +785,33 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
               deltaZ: this.getDistanceZ(measurement),
               angle: this.getAngle(measurement),
               area: this.getArea(measurement),
+              arc: this.getArc(measurement),
+              location: this.getLocation(measurement),
+              text: this.getCallout(measurement),
               unitType: unitType || _sharedMeasureConfig.units,
               precision: precision || _sharedMeasureConfig.precision,
               picks,
               type
+            };
+            if (measurement.options) {
+                const options = result.options = JSON.parse(JSON.stringify(measurement.options));
+                if (!options.modelId && picks[0] && picks[0].modelId)
+                    options.modelId = picks[0].modelId;
+                const model = options.modelId ? _viewer.impl.findModel(options.modelId) : _viewer.model;
+                const globalOffset = model && model.getData().globalOffset;
+                if (globalOffset && (globalOffset.x !== 0 || globalOffset.y !== 0 || globalOffset.z !== 0)) {
+                    const cvtPts = points => {
+                        if (points) {
+                            for (let i = 0; i < points.length; ++i) {
+                                // Tricky way to use Vector3 add on plain objects
+                                THREE.Vector3.prototype.add.call(points[i], globalOffset);
+                            }
+                        }
+                    };
+                    cvtPts(options.dimensionOffset);
+                    cvtPts(options.dashedLeader);
+                    cvtPts(options.arc);
+                }
             }
             list.push(result);
         }
@@ -606,10 +820,10 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
 
     this.clearCurrentMeasurement = function() {
         if (_currentMeasurement) {
-            noPicksSet();
+            this.noPicksSet();
 
             for (var key in _currentMeasurement.picks) {
-                if (_currentMeasurement.picks.hasOwnProperty(key)) {
+                if (Object.prototype.hasOwnProperty.call(_currentMeasurement.picks, key)) {
                     this.clearPick(key);    
                 }
             }
@@ -639,6 +853,10 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
     this.setIsolateMeasure = function(enable) {
         _isolateMeasure = enable;
     };
+   
+    this.getIsolateMeasure = function() {
+        return _isolateMeasure;
+    };
 
     this.isolateMeasurement = function () {
 
@@ -650,11 +868,11 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         var isolationGroups = {};
 
         for (var key in _measurementsManager.measurementsList) {
-            if (_measurementsManager.measurementsList.hasOwnProperty(key)) {
+            if (Object.prototype.hasOwnProperty.call(_measurementsManager.measurementsList, key)) {
 
                 var measurement = _measurementsManager.measurementsList[key];
-                for (var key in measurement.picks) {
-                    if (measurement.picks.hasOwnProperty(key)) {
+                for (let key in measurement.picks) {
+                    if (Object.prototype.hasOwnProperty.call(measurement.picks, key)) {
                         var pick = measurement.getPick(key);
 
                         var modelId = pick.modelId || defaultModelId;
@@ -673,8 +891,8 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
 
         // convert to expected format
         var isolationSet = [];
-        for (var modelId in isolationGroups) {
-            if (isolationGroups.hasOwnProperty(modelId)) {
+        for (let modelId in isolationGroups) {
+            if (Object.prototype.hasOwnProperty.call(isolationGroups, modelId)) {
 
                 var modelInstance = _viewer.impl.findModel(parseInt(modelId));
                 isolationSet.push({
@@ -712,7 +930,7 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         }
 
         for (var key in _measurementsManager.measurementsList) {
-            if (_measurementsManager.measurementsList.hasOwnProperty(key)) {
+            if (Object.prototype.hasOwnProperty.call(_measurementsManager.measurementsList, key)) {
                 var measurement = _measurementsManager.measurementsList[key];
                 if (measurement.indicator) {
                     measurement.indicator.setSimple(true);        
@@ -733,8 +951,8 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         
         if (_currentMeasurement.isComplete()) {
             _currentMeasurement.indicator.setSimple(false);        
-            allPicksSet();
-            render(true); 
+            this.allPicksSet();
+            this.render(true); 
             this.updateResults();
         }
     };
@@ -745,14 +963,7 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         }
 
         if (_currentMeasurement.id !== measurementId) {
-            if (!this.areAllPicksSet()) {
-                if (this.isEditingEndpoint) {
-                    this.undoEditEndpoint();
-                }
-                else {
-                    this.clearCurrentMeasurement();
-                }
-            }
+            this.clearIncompleteMeasurement();
             
             _currentMeasurement = _measurementsManager.selectMeasurementById(measurementId);
         }
@@ -760,7 +971,7 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
 
     function enableMeasurementsTouchEvents(enable) {
         for (var key in _measurementsManager.measurementsList) {
-            if (_measurementsManager.measurementsList.hasOwnProperty(key)) {
+            if (Object.prototype.hasOwnProperty.call(_measurementsManager.measurementsList, key)) {
                 var measurement = _measurementsManager.measurementsList[key];
                 measurement.indicator.changeAllEndpointsEditableStyle(enable);   
                 measurement.indicator.enableSelectionAreas(enable);
@@ -777,6 +988,7 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         }
 
         this.selectMeasurementById(measurementId);
+        _viewer.dispatchEvent({ type: SET_MOUSE_TRACKING, mode: 'start' });
 
         _activePoint = endpointNumber;
         this.isEditingEndpoint = true;
@@ -785,7 +997,7 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         enableMeasurementsTouchEvents(false);
 
         for (var key in _currentMeasurement.picks) {
-            if (_currentMeasurement.picks.hasOwnProperty(key)) {
+            if (Object.prototype.hasOwnProperty.call(_currentMeasurement.picks, key)) {
                 _picksBackup[key] = _currentMeasurement.getPick(key).clone();
             }
         }
@@ -810,7 +1022,7 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
             _currentMeasurement.isRestored = !function() {
                 const picks = _currentMeasurement.picks;
                 for (var key in picks) {
-                    if (picks.hasOwnProperty(key)) {
+                    if (Object.prototype.hasOwnProperty.call(picks, key)) {
                         const pick = picks[key];
                         if (!pick.isValid) {
                             return false;
@@ -826,15 +1038,15 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         }
     };
 
-    function canCloseArea() {
+    this.canCloseArea = function() {
         return _currentMeasurement.countPicks() > 3;
-    }
+    };
 
     this.undoEditEndpoint = function() {
         _currentMeasurement.indicator.clear();
 
         for (var key in _currentMeasurement.picks) {
-            if (_currentMeasurement.picks.hasOwnProperty(key)) {
+            if (Object.prototype.hasOwnProperty.call(_currentMeasurement.picks, key)) {
                 _currentMeasurement.setPick(key, _picksBackup[key].clone());
             }
         }
@@ -843,8 +1055,8 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         
         this.isEditingEndpoint = false;
         this.updateViewportId(true);
-        allPicksSet();
-        render(true);
+        this.allPicksSet();
+        this.render(true);
     };
 
     this.updateResults = function() {
@@ -870,19 +1082,28 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
             _currentMeasurement = _measurementsManager.getCurrentMeasurement();
             this.deleteCurrentMeasurement();
         }
-    }
+    };
 
     this.deleteCurrentMeasurement = function() {
+        // Keeping a copy of current measurement so send info in event.
+        let _deletedMeasurement = _currentMeasurement ? _currentMeasurement.clone() : null;
         this.clearCurrentMeasurement();
         this.isEditingEndpoint = false;
         this.editByDrag = false;
         _isDragging = false;
         this.isolateMeasurement();
+        if(_deletedMeasurement){
+            _viewer.dispatchEvent({
+                type: MeasureCommon.Events.DELETE_MEASUREMENT,
+                data: { type: _deletedMeasurement.measurementType, id: _deletedMeasurement.id }
+            });
+        }
+        _deletedMeasurement = null;
     };
 
     this.deleteCurrentPick = function() {
 
-        var pick = getActivePick();
+        var pick = this.getActivePick();
         var id = pick.id;
 
         while (_currentMeasurement.hasPick(id + 1)) {
@@ -911,8 +1132,8 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
             _currentMeasurement.indicator.changeAllEndpointsOnEditStyle(false);
             this.isEditingEndpoint = false;
             this.updateViewportId(true);
-            allPicksSet();
-            render();
+            this.allPicksSet();
+            this.render();
         } else {
             this._handleMouseEvent();    
         }
@@ -920,45 +1141,68 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
 
     this.updateViewportId = function(clear) {
         if (_viewer.model && _viewer.model.is2d()) {
-            if (clear || isNoPicksSet()) {
+            if (clear || this.isNoPicksSet() || this.isCalibrationSetOnPage()) {
                 _viewer.impl.updateViewportId(0);
                 _snapper.setViewportId(null);
             }
             else if (!_isPressing) {
-                var viewport = getPreviousPick().viewportIndex2d || getActivePick().viewportIndex2d;
+                var viewport = this.getPreviousPick().viewportIndex2d || this.getActivePick().viewportIndex2d;
                 
                 // Pass viewport Id to LineShader to make all other geometries with different viewport transparent
                 _viewer.impl.updateViewportId(viewport);
                 if (_snapper)
                     _snapper.setViewportId(viewport);  
-            
+
+                // Use desired viewport precision if defined
+                const viewports = _viewer.model.getData()?.viewports;
+                if (_sharedMeasureConfig.useViewportInfo && viewports.length > 1) {
+                    this.setPrecision(viewports[viewport]?.precision);
+                }
             }
         }
     };
 
+    // Setting session measurements before activating measure needed
+    // some special handling for the topology state. The problem was
+    // that the indicators were set to 'fetching', and were cleared from
+    // _currentMeasurement before the the topology fetch could finish.
+    // I changed the logic to track all of the measurements that were
+    // marked as fetching and clear them when the fetch is finished.
+
+    // Clear fetching state in all measurements that were created
+    // while we were fetching topology. The stateSetter is the name
+    // of the method that sets the correct state.
+    function changeFetchingState(stateSetter) {
+        // call setter for all measurements in the list
+        for (let i = 0; i < _fetchingMeasurements.length; ++i) {
+            var measurement = _fetchingMeasurements[i];
+            measurement.indicator[stateSetter]();
+        }
+        // Clear list
+        _fetchingMeasurements.length = 0;
+    }
+
     this.setNoTopology = function() {
-        if (_currentMeasurement && _currentMeasurement.indicator) {
-            _currentMeasurement.indicator.setNoTopology();
-        }
-        else {
-            _onIndicatorCreatedCB = function() { _currentMeasurement.indicator.setNoTopology(); };
-        }
+        // Change existing indicators
+        changeFetchingState("setNoTopology");
+        // Set state for future measurements
+        _onIndicatorCreatedCB = function() { _currentMeasurement.indicator.setNoTopology(); };
     };
     this.setFetchingTopology = function() {
-        if (_currentMeasurement && _currentMeasurement.indicator) {
+        // Set state for future measurements
+        _onIndicatorCreatedCB = function() {
+            _fetchingMeasurements.push(_currentMeasurement);
             _currentMeasurement.indicator.setFetchingTopology();
-        }
-        else {
-            _onIndicatorCreatedCB = function() { _currentMeasurement.indicator.setFetchingTopology(); };
-        }
+        };
+        // Change existing indicator
+        if (_currentMeasurement && _currentMeasurement.indicator)
+            _onIndicatorCreatedCB();
     };
     this.setTopologyAvailable = function() {
-        if (_currentMeasurement && _currentMeasurement.indicator) {
-            _currentMeasurement.indicator.setTopologyAvailable();
-        }
-        else {
-            _onIndicatorCreatedCB = function() { _currentMeasurement.indicator.setTopologyAvailable(); };
-        }
+        // Change existing indicators
+        changeFetchingState("setTopologyAvailable");
+        // Set state for future measurements
+        _onIndicatorCreatedCB = function() { _currentMeasurement.indicator.setTopologyAvailable(); };
     };
 
     this.getSnapper = function() {
@@ -967,7 +1211,7 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
 
     this.correctPickPosition = function() {
         
-        var active = getActivePick();
+        var active = this.getActivePick();
         
         if (active && !active.getGeometry() && _cursorPosition) {
             active.geomType = MeasureCommon.SnapType.SNAP_VERTEX;
@@ -975,8 +1219,8 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
             active.intersectPoint = _cursorPosition;
         }
 
-        if (hasPreviousPick()) {
-            var passive = getPreviousPick();
+        if (this.hasPreviousPick()) {
+            var passive = this.getPreviousPick();
             var corrected = MeasureCommon.correctPerpendicularPicks(passive, active, viewer, _snapper);
             if (!corrected) {
 
@@ -993,7 +1237,7 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
             }
             
             if (_currentMeasurement.measurementType == MeasureCommon.MeasurementTypes.MEASUREMENT_AREA) {
-                snapToFirstPick(active);    
+                this.snapToFirstPick(active);    
             }
         }
     };
@@ -1005,26 +1249,50 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
         if (_snapper.isSnapped()) {
             
             // User picked a new point after two points where already set (or none) - Start a new measurement.
-            if (this.areAllPicksSet() || isNoPicksSet()) {
+            if (this.areAllPicksSet() || this.isNoPicksSet()) {
                 this.startNewMeasurement();
 
                 _activePoint = 1;
             }
 
-            _snapper.copyResults(getActivePick());
+            _snapper.copyResults(this.getActivePick());
+
+
+            // When user is in the arc measurement mode and the user clicks on a different circle than the first point, then don't do anything
+            if (_consumeSingleClick && _currentMeasurement?.measurementType === MeasureCommon.MeasurementTypes.MEASUREMENT_ARC) {
+                if(!_currentMeasurement.getPick(1).circularArcCenter ||
+                (_currentMeasurement.hasPick(2) && !(MeasureCommon.isEqualVectors(_currentMeasurement.getPick(1).circularArcCenter, _currentMeasurement.getPick(2).circularArcCenter, 0)
+                && (_currentMeasurement.getPick(1).circularArcRadius === _currentMeasurement.getPick(2).circularArcRadius)))) {
+                    return false;
+                }
+            }
 
             valid = true;
 
         } 
         else { 
             // In order to draw rubber-band, set the cursor position, so the indicator will use it as active point.
-            if (event && _viewer.model && _viewer.model.is2d()) {
+            if (event && _viewer.model) {
                 var viewport = _viewer.container.getBoundingClientRect();
                 var x = event.canvasX || event.clientX - viewport.left;
                 var y = event.canvasY || event.clientY - viewport.top;
 
                 if (x && y) {
-                    _cursorPosition = MeasureCommon.inverseProject({ x:x, y:y }, _viewer);
+                    let canDrawRubberBand;
+                    if (_viewer.impl.is2d) {
+                        canDrawRubberBand = true;
+                    } else {
+                        const renderer = _viewer.impl.renderer();
+                        const res = [];
+                        renderer.idAtPixel(x, y, res);
+                        const modelId = res[1];
+                        if (modelId > 0) {
+                            const model = _viewer.impl.modelQueue().findModel(modelId);
+                            canDrawRubberBand = model?.is2d();
+                        }
+                    }
+
+                    _cursorPosition = canDrawRubberBand ? MeasureCommon.inverseProject({x: x, y: y}, _viewer) : null;
                 }
             }
 
@@ -1035,7 +1303,7 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
                 }
             }
 
-            var lastPick = getActivePick();
+            var lastPick = this.getActivePick();
             if (lastPick) {
                 lastPick.clear();
             }
@@ -1048,8 +1316,8 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
                 this._doConsumeSingleClick();
             }
 
-            if (!isNoPicksSet()) {
-                var renderSucceeded = render();
+            if (!this.isNoPicksSet()) {
+                var renderSucceeded = this.render();
                 
                 // If it's the first pick, we don't expect the render of the rubberband to be succeeded.
                 // So enter here only if it's not the first pick.
@@ -1081,6 +1349,13 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
 
         var measurementComplete = _currentMeasurement.isComplete();
         this.updateViewportId(measurementComplete);
+        _viewer.dispatchEvent({ type: SET_MOUSE_TRACKING, mode: measurementComplete ? 'end' : 'start' });
+
+        avp.analytics.track('viewer.measure', {
+            action: 'Measurement',
+            type: MeasureCommon.MeasurementTypesToAnalytics[_currentMeasurement.measurementType],
+            snapping: this.getActivePick()?.geomType !== MeasureCommon.SnapType.RASTER_PIXEL,
+        });
     };
 
 
@@ -1089,6 +1364,7 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
             return false;
 
         _isDragging = true;
+        _viewer.dispatchEvent({ type: SET_MOUSE_TRACKING, mode: 'start' });
         if (button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
             _consumeSingleClick = true;
             _downX = event.canvasX;
@@ -1108,10 +1384,12 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
 
         _endpointMoved = this.isEditingEndpoint;
 
-        if (!isNoPicksSet() && !this.areAllPicksSet()) {
+        if (!this.isNoPicksSet() && !this.areAllPicksSet()) {
             this.clearPick(_activePoint);
             this._handleMouseEvent(event);
         }
+
+        checkSnapperIndicatorForArc(); 
 
         _snapper.indicator.render();
 
@@ -1136,7 +1414,7 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
                 case "press":
                     _isPressing = true;
 
-                    if (this.areAllPicksSet() || isNoPicksSet()) {
+                    if (this.areAllPicksSet() || this.isNoPicksSet()) {
                         this.startNewMeasurement();
 
                         if (_isolateMeasure) { 
@@ -1226,7 +1504,7 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
 
             if (event.type.indexOf('pinch') !== -1) {
                 for (var key in _measurementsManager.measurementsList) {
-                    if (_measurementsManager.measurementsList.hasOwnProperty(key)) {
+                    if (Object.prototype.hasOwnProperty.call(_measurementsManager.measurementsList, key)) {
                         var measurement = _measurementsManager.measurementsList[key];
                         measurement.indicator.updateScale();    
                     }
@@ -1239,6 +1517,7 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
 
     this.handleButtonUp = function (event, button) {
         _isDragging = false;
+        _viewer.dispatchEvent({ type: SET_MOUSE_TRACKING, mode: 'end' });
         _downX = null;
         _downY = null;
         
@@ -1270,8 +1549,8 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
                     this.undoEditEndpoint();
                 }
                 else {
-                    if (_currentMeasurement && _currentMeasurement.measurementType === MeasureCommon.MeasurementTypes.MEASUREMENT_AREA && canCloseArea()) {
-                        snapToFirstPick(getActivePick(), true);
+                    if (_currentMeasurement && _currentMeasurement.measurementType === MeasureCommon.MeasurementTypes.MEASUREMENT_AREA && this.canCloseArea()) {
+                        this.snapToFirstPick(this.getActivePick(), true);
                         this._handleMouseEvent();
                     } else {
                         this.clearCurrentMeasurement();    
@@ -1280,7 +1559,7 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
             }
 
             if (_currentMeasurement && _currentMeasurement.isComplete()) {
-                allPicksSet();
+                this.allPicksSet();
             }
 
             _consumeSingleClick = false;
@@ -1298,7 +1577,7 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
 
     this.onCameraChange = function () {
         for (var key in _measurementsManager.measurementsList) {
-            if (_measurementsManager.measurementsList.hasOwnProperty(key)) {
+            if (Object.prototype.hasOwnProperty.call(_measurementsManager.measurementsList, key)) {
                 var measurement = _measurementsManager.measurementsList[key];
                 measurement.indicator.updateScale();
             }
@@ -1337,7 +1616,7 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
 
     this.handleResize = function() {
         for (var key in _measurementsManager.measurementsList) {
-            if (_measurementsManager.measurementsList.hasOwnProperty(key)) {
+            if (Object.prototype.hasOwnProperty.call(_measurementsManager.measurementsList, key)) {
                 var measurement = _measurementsManager.measurementsList[key];
                 if (measurement.indicator) {
                     measurement.indicator.handleResize();
@@ -1365,7 +1644,11 @@ export function MeasureTool( viewer, options, sharedMeasureConfig, snapper )
 
         return false;
     };
-};
+
+    // When calibration is set on viewport 0, all measurements should be done on it, regardless of where they started
+    this.isCalibrationSetOnPage = function() {
+        return options.calibrateWithPage && _sharedMeasureConfig.calibrationFactor != null;
+    };
+}
 
 av.GlobalManagerMixin.call(MeasureTool.prototype);
-

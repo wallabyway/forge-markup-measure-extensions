@@ -1,14 +1,14 @@
 'use strict';
 
-import { EditMode } from './EditMode'
-import { DeleteCallout } from '../edit-actions/DeleteCallout'
-import { CreateCallout } from '../edit-actions/CreateCallout'
-import { SetCallout } from '../edit-actions/SetCallout'
-import { SetStyle } from '../edit-actions/SetStyle'
-import { SetSize } from '../edit-actions/SetSize'
-import * as MarkupTypes from '../MarkupTypes'
-import * as MarkupEvents from '../MarkupEvents'
-import { EditorTextInput } from './EditorTextInput'
+import { EditMode } from './EditMode';
+import { DeleteCallout } from '../edit-actions/DeleteCallout';
+import { CreateCallout } from '../edit-actions/CreateCallout';
+import { SetCallout } from '../edit-actions/SetCallout';
+import { SetStyle } from '../edit-actions/SetStyle';
+import { SetSize } from '../edit-actions/SetSize';
+import * as MarkupTypes from '../MarkupTypes';
+import * as MarkupEvents from '../MarkupEvents';
+import { EditorTextInput } from './EditorTextInput';
 
 
     var STARTING_WIDTH_FACTOR = 6;

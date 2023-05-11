@@ -1,10 +1,10 @@
 'use strict';
 
-import { EditMode } from './EditMode'
-import { DeleteCircle } from '../edit-actions/DeleteCircle'
-import { CreateCircle } from '../edit-actions/CreateCircle'
-import { SetCircle } from '../edit-actions/SetCircle'
-import * as MarkupTypes from '../MarkupTypes'
+import { EditMode } from './EditMode';
+import { DeleteCircle } from '../edit-actions/DeleteCircle';
+import { CreateCircle } from '../edit-actions/CreateCircle';
+import { SetCircle } from '../edit-actions/SetCircle';
+import * as MarkupTypes from '../MarkupTypes';
 
     /**
      * Markup circle edit mode.
@@ -50,12 +50,11 @@ import * as MarkupTypes from '../MarkupTypes'
      */
     proto.onMouseMove = function(event) {
 
-        EditMode.prototype.onMouseMove.call( this, event );
+        if (!EditMode.prototype.onMouseMove.call( this, event )) {
+            return false;
+        }
 
         var selectedMarkup = this.selectedMarkup;
-        if(!selectedMarkup || !this.creating) {
-            return;
-        }
 
         var editor = this.editor;
 
@@ -75,6 +74,7 @@ import * as MarkupTypes from '../MarkupTypes'
             size);
 
         setCircle.execute();
+        return true;
     };
 
     /**

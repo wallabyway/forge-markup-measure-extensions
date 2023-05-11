@@ -1,14 +1,14 @@
 'use strict';
 
-import { EditMode } from './EditMode'
-import { DeleteDimension } from '../edit-actions/DeleteDimension'
-import { CreateDimension } from '../edit-actions/CreateDimension'
-import { SetDimension } from '../edit-actions/SetDimension'
-import { SetStyle } from '../edit-actions/SetStyle'
-import * as MarkupTypes from '../MarkupTypes'
-import * as MarkupEvents from '../MarkupEvents'
-import { EditorTextInput } from './EditorTextInput'
-import { measureTextLines, radiansToDegrees } from '../MarkupsCoreUtils'
+import { EditMode } from './EditMode';
+import { DeleteDimension } from '../edit-actions/DeleteDimension';
+import { CreateDimension } from '../edit-actions/CreateDimension';
+import { SetDimension } from '../edit-actions/SetDimension';
+import { SetStyle } from '../edit-actions/SetStyle';
+import * as MarkupTypes from '../MarkupTypes';
+import * as MarkupEvents from '../MarkupEvents';
+import { EditorTextInput } from './EditorTextInput';
+import { measureTextLines, radiansToDegrees } from '../MarkupsCoreUtils';
 
     var MeasureCommon = Autodesk.Viewing.MeasureCommon;
     
@@ -47,7 +47,7 @@ import { measureTextLines, radiansToDegrees } from '../MarkupsCoreUtils'
         this.sharedMeasureConfig = measureExt.sharedMeasureConfig;
         
         // If PDF, force calibration
-        if ((measureExt.forceCalibrate || viewer.model.getData().isLeaflet || viewer.model.getData().isPdf) && !measureExt.calibrationTool.isCalibrated()) {
+        if ((measureExt.forceCalibrate || viewer.model.isLeaflet() || viewer.model.isPdf(true)) && !measureExt.calibrationTool.isCalibrated()) {
             measureExt.openCalibrationRequiredDialog('dimension');
             abortDimensionMarkup();
         }

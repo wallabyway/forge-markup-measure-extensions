@@ -1,7 +1,7 @@
 'use strict';
 
-import { EditAction } from './EditAction'
-import { CreateFreehand } from './CreateFreehand'
+import { EditAction } from './EditAction';
+import { CreateFreehand } from './CreateFreehand';
 
     /**
      *

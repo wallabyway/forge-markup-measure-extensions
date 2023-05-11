@@ -1,6 +1,6 @@
 'use strict';
 
-import { EditAction } from './EditAction'
+import { EditAction } from './EditAction';
 
     /**
      * Markup set circle action.

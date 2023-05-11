@@ -241,4 +241,4 @@
         }
 
         return {x:bestCell.x, y:bestCell.y};
-    };
+    }

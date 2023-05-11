@@ -1,10 +1,10 @@
 'use strict';
 
-import { EditModePen } from './EditModePen'
-import { DeleteFreehand } from '../edit-actions/DeleteFreehand'
-import { CreateFreehand } from '../edit-actions/CreateFreehand'
-import { SetFreehand } from '../edit-actions/SetFreehand'
-import * as MarkupTypes from '../MarkupTypes'
+import { EditModePen } from './EditModePen';
+import { DeleteFreehand } from '../edit-actions/DeleteFreehand';
+import { CreateFreehand } from '../edit-actions/CreateFreehand';
+import { SetFreehand } from '../edit-actions/SetFreehand';
+import * as MarkupTypes from '../MarkupTypes';
 
     /**
      *

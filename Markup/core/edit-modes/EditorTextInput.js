@@ -1,10 +1,10 @@
 'use strict';
 
-const ResizeObserver = require('../../../thirdparty/resize-observer-polyfill/ResizeObserver.min.js'); // Required for Markup Text Input
-import { autosize } from './EditorTextAutosize'
-import { addTraitEventDispatcher } from '../MarkupsCoreUtils'
-import { cloneStyle } from '../StyleUtils'
-import { DomElementStyle } from '../DomElementStyle'
+import ResizeObserver from 'resize-observer-polyfill';
+import { autosize } from './EditorTextAutosize';
+import { addTraitEventDispatcher } from '../MarkupsCoreUtils';
+import { cloneStyle } from '../StyleUtils';
+import { DomElementStyle } from '../DomElementStyle';
 
 const av = Autodesk.Viewing;
 
@@ -480,7 +480,7 @@ const av = Autodesk.Viewing;
         // Else
         // Iterate back removing additional spaces (multi spaces)
         while (line.charAt(iLastSpace-1) === ' ') {
-            iLastSpace--
+            iLastSpace--;
         }
 
         var trailingWord = line.substr(iLastSpace); // Contains the spaces

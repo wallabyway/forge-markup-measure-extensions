@@ -1,8 +1,8 @@
 'use strict';
 
-import { EditAction } from './EditAction'
-import { MarkupFreehand } from '../MarkupFreehand'
-import { cloneStyle } from '../StyleUtils'
+import { EditAction } from './EditAction';
+import { MarkupFreehand } from '../MarkupFreehand';
+import { cloneStyle } from '../StyleUtils';
 
     /**
      *

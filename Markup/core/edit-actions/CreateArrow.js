@@ -1,8 +1,8 @@
 'use strict';
 
-import { EditAction } from './EditAction'
-import { MarkupArrow } from '../MarkupArrow'
-import { cloneStyle } from '../StyleUtils'
+import { EditAction } from './EditAction';
+import { MarkupArrow } from '../MarkupArrow';
+import { cloneStyle } from '../StyleUtils';
 
     /**
      * @constructor

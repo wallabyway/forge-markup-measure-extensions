@@ -1,17 +1,17 @@
-const canvg = require('../../thirdparty/canvg/canvg.js'); // Required for Markup Thumbnails
-import * as MarkupType from '../core/MarkupTypes'
-import { CreateArrow } from './edit-actions/CreateArrow'
-import { CreateRectangle } from './edit-actions/CreateRectangle'
-import { CreateText } from './edit-actions/CreateText'
-import { CreateCallout } from './edit-actions/CreateCallout'
-import { CreateCircle } from './edit-actions/CreateCircle'
-import { CreateCloud } from './edit-actions/CreateCloud'
-import { CreateFreehand } from './edit-actions/CreateFreehand'
-import { CreatePolyline } from './edit-actions/CreatePolyline'
-import { CreatePolycloud } from './edit-actions/CreatePolycloud'
-import { CreateHighlight } from './edit-actions/CreateHighlight'
-import { CreateDimension } from './edit-actions/CreateDimension'
-import { DomElementStyle } from './DomElementStyle'
+import * as MarkupType from '../core/MarkupTypes';
+import { CreateArrow } from './edit-actions/CreateArrow';
+import { CreateRectangle } from './edit-actions/CreateRectangle';
+import { CreateText } from './edit-actions/CreateText';
+import { CreateCallout } from './edit-actions/CreateCallout';
+import { CreateCircle } from './edit-actions/CreateCircle';
+import { CreateCloud } from './edit-actions/CreateCloud';
+import { CreateFreehand } from './edit-actions/CreateFreehand';
+import { CreatePolyline } from './edit-actions/CreatePolyline';
+import { CreatePolycloud } from './edit-actions/CreatePolycloud';
+import { CreateHighlight } from './edit-actions/CreateHighlight';
+import { CreateDimension } from './edit-actions/CreateDimension';
+import { DomElementStyle } from './DomElementStyle';
+import { CreateStamp } from './edit-actions/CreateStamp';
 
 
     var av = Autodesk.Viewing;
@@ -268,7 +268,7 @@ import { DomElementStyle } from './DomElementStyle'
 
         metadataNode.appendChild(dataVersionNode);
         for (var key in metadata) {
-            if (metadata.hasOwnProperty(key)) {
+            if (Object.prototype.hasOwnProperty.call(metadata, key)) {
                 dataVersionNode.setAttribute(key, metadata[key]);
             }
         }
@@ -776,6 +776,7 @@ import { DomElementStyle } from './DomElementStyle'
                     case 'font-style':
                     case 'font-weight':
                     case 'stroke-color':
+                    case 'text-data':
                     case 'fill-color':
                         style[source[i]] = value;
                         break;
@@ -805,7 +806,7 @@ import { DomElementStyle } from './DomElementStyle'
 
             for(var i=0; i< locStr.length; i+=2) {
                 var pointPair = {x:parseFloat(locStr[i]), y:parseFloat(locStr[i+1])};
-                locations.push( pointPair )
+                locations.push( pointPair );
             }
             return locations;
         };
@@ -929,6 +930,13 @@ import { DomElementStyle } from './DomElementStyle'
                     secondAnchor = getAttributeVector('secondAnchor');
                     text = getText();
                     createMarkup = new CreateDimension(editor, id, firstAnchor, secondAnchor, text, style);
+                    break;
+
+                case MarkupType.MARKUP_TYPE_STAMP:
+                    position = getPosition();
+                    size = getSize();
+                    rotation = getRotation();
+                    createMarkup = new CreateStamp(editor, id, position, size, rotation, style, child);
                     break;
 
                 default:
@@ -1362,9 +1370,13 @@ import { DomElementStyle } from './DomElementStyle'
         tmpSvg.setAttribute('width',width);
         tmpSvg.setAttribute('height',height);
         tmpSvg.setAttribute('viewBox',viewBox);
-        tmpSvg.setAttribute('transform', 'scale(1,-1)');
-        
+
+        if (!av.isSafari())
+            tmpSvg.setAttribute('transform', 'scale(1, -1)');
+
         var markupGroup = svg.parentNode.cloneNode(true);
+        if (av.isSafari())
+            markupGroup.setAttribute('transform', 'scale(1, -1)');
 
         // Adding the markup itself to the temp SVG
         tmpSvg.appendChild(markupGroup);
@@ -1379,28 +1391,14 @@ import { DomElementStyle } from './DomElementStyle'
         
         tmpSvg = temp = node = null;
 
-        var renderWithCanvg = function() {
-            canvg(ctx.canvas, data, {ignoreMouse: true, ignoreDimensions: true, ignoreClear: true, renderCallback: callback});
+        var img = new Image();
+
+        img.onload = function() {
+            ctx.drawImage(img, 0, 0);
+            callback();
         };
 
-        // IE11 blocks 'tainted' canvas for security reasons. canvg is a library that solves that issue, and draws on the canvas without tainting it.
-        if (av.isIE11) {
-            renderWithCanvg();
-        }
-        else {
-            var img = new Image();
-
-            img.onload = function() {
-                ctx.drawImage(img, 0, 0);
-                callback();
-            };
-
-            img.onerror = function() {
-                renderWithCanvg();
-            };
-
-            img.src = 'data:image/svg+xml;base64,' + _window.btoa(unescape( encodeURIComponent( data )));
-        }
+        img.src = 'data:image/svg+xml;base64,' + _window.btoa(unescape( encodeURIComponent( data )));
     };
 
     /*
@@ -1509,5 +1507,5 @@ import { DomElementStyle } from './DomElementStyle'
         points = simplifyDouglasPeucker(points, sqTolerance);
 
         return points;
-    }
+    };
 

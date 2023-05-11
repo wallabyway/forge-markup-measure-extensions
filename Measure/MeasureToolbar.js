@@ -18,11 +18,35 @@
     var proto = MeasureToolbar.prototype;
     av.GlobalManagerMixin.call(MeasureToolbar.prototype);
 
+    proto.onUnitChange = function(toUnits, selfTriggered) {
+        if (selfTriggered)
+            this.measureTool.setUnits(toUnits);
+        else {
+            this.updateSettingsPanel();
+            avp.logger.track({ category: 'pref_changed', name: 'measure/units', value: toUnits });
+        }
+    };
+
+    proto.onPrecisionChange = function(precision, selfTriggered) {
+        if (selfTriggered)
+        this.measureTool.setPrecision(precision);
+        else {
+            this.updateSettingsPanel();
+            avp.logger.track({ category: 'pref_changed', name: 'measure/precision', value: precision });
+        }
+    };
+
     proto.init = function() {
         var self = this;
 
         const _document = this.getDocument();
 
+        this.onUnitChangeBound = this.onUnitChange.bind(this);
+        this.viewer.addEventListener(MeasureCommon.Events.DISPLAY_UNITS_CHANGED, this.onUnitChangeBound);
+
+        this.onPrecisionChangeBound = this.onPrecisionChange.bind(this);
+        this.viewer.addEventListener(MeasureCommon.Events.PRECISION_CHANGED, this.onPrecisionChangeBound);
+        
         // Add Measure tool toolbar to main toolbar
         var toolbar = this.viewer.getToolbar();
         var navigationBar = toolbar.getControl(Autodesk.Viewing.TOOLBAR.NAVTOOLSID);
@@ -84,6 +108,25 @@
 
             this.measureToolbar.addControl(this.measureAreaBtn);
             this.buttonsList[MeasureCommon.MeasurementTypes.MEASUREMENT_AREA] = this.measureAreaBtn;
+        }
+
+        if (this.viewer.model && this.viewer.model.is2d()) {
+          // Create a button for the arc measurement.
+          this.measureArcBtn = new avu.Button("toolbar-measureTool-arc");
+          this.measureArcBtn.setGlobalManager(this.globalManager);
+          this.measureArcBtn.setToolTip("Arc");
+          this.measureArcBtn.setIcon("adsk-icon-measure-arc-new");
+          this.measureArcBtn.onClick = function() {
+              var enable = self.measureArcBtn.getState() !== avu.Button.State.ACTIVE;
+              if (enable) {
+                  self.measureExtension.activate('arc');
+              } else {
+                  self.measureTool.deselectAllMeasurements();
+              }
+          };
+
+          this.measureToolbar.addControl(this.measureArcBtn);
+          this.buttonsList[MeasureCommon.MeasurementTypes.MEASUREMENT_ARC] = this.measureArcBtn;
         }
 
         // Create a button for the Calibration tool.
@@ -175,7 +218,7 @@
             unitNames = [];
         
         // It is not possible to hide elements in Safari.
-        if (av.isSafari() && this.viewer.model.getDisplayUnit()){
+        if (av.isSafari() && this.viewer.model && this.viewer.model.getDisplayUnit()){
             // We will remove the 'Unknown' unit from the units array.
             this.units.shift();
         }
@@ -188,18 +231,14 @@
         this.unitList.setGlobalManager(this.globalManager);
         this.unitList.addEventListener("change", function(e) {
             var index = self.unitList.selectedIndex;
-            var toUnits = self.units[index].units;
-            self.measureTool.setUnits(toUnits);
-            self.setupPrecision();
-            avp.logger.track({ category: 'pref_changed', name: 'measure/units', value: toUnits });
+            self.onUnitChange(self.units[index].units, true);
         });
 
         this.precisionList = new avp.OptionDropDown("Precision", this.tbody, [], -1, null, { paddingLeft: 0, paddingRight: 15 });
         this.precisionList.setGlobalManager(this.globalManager);
         this.precisionList.addEventListener("change", function(e) {
             var index = self.precisionList.selectedIndex;
-            self.measureTool.setPrecision(index);
-            avp.logger.track({ category: 'pref_changed', name: 'measure/precision', value: index });
+            self.onPrecisionChange(index, true);
         });
 
         this.isolate = new avp.OptionCheckbox("Isolate measurement", this.tbody, false);
@@ -216,6 +255,14 @@
             avp.logger.track({ category: 'pref_changed', name: 'measure/isolate', value: enable });
         });
 
+        this.freeMeasure = new avp.OptionCheckbox("Enable free measure", this.tbody, this.measureExtension.isFreeMeasureMode());
+        this.freeMeasure.setGlobalManager(this.globalManager);
+        this.freeMeasure.addEventListener("change", function(e) {
+            var enable = self.freeMeasure.checked;
+            self.measureExtension.setFreeMeasureMode(enable);
+            avp.logger.track({ category: 'pref_changed', name: 'measure/freeMeasure', value: enable });
+        });
+
         this.setupPrecision();
 
         this.updateSettingsPanel();
@@ -223,8 +270,9 @@
         if (this.viewer.model && this.viewer.model.is2d()) {
             this.isolate.setVisibility(false);
         }
-
-        if (!this.measureExtension.sharedMeasureConfig.units) {
+        
+        // BLMV-6350 - disable only if units are undefined, do not disable if null, since we are going to assign units in Measure.js, `_onModelLoaded`.
+        if (this.measureExtension.sharedMeasureConfig.units === undefined) {
             this.disableUnitOption();
         }
         // Only disable option if the browser is not Safari
@@ -262,6 +310,11 @@
         if (this.visible) {
             this.closeToolbar();
         }
+
+        this.viewer.removeEventListener(MeasureCommon.Events.DISPLAY_UNITS_CHANGED, this.onUnitChangeBound);
+        this.onUnitChangeBound = null;
+        this.viewer.removeEventListener(MeasureCommon.Events.PRECISION_CHANGED, this.onPrecisionChangeBound);
+        this.onPrecisionChangeBound = null;
 
         if (this.measureToolbar) {
             this.measureToolbar.removeFromParent();
@@ -306,7 +359,7 @@
 
     proto.deactivateAllButtons = function() {
         for (var key in this.buttonsList) {
-            if (this.buttonsList.hasOwnProperty(key)) {
+            if (Object.prototype.hasOwnProperty.call(this.buttonsList, key)) {
                 var button = this.buttonsList[key];
                 this.setButtonInactive(button);   
             }
@@ -314,7 +367,8 @@
     };
 
     proto.activateButtonByType = function(measurementType) {
-        this.setButtonActive(this.buttonsList[measurementType]);
+        // Check that toolbar button exists - some measurement types don't have UI
+        this.buttonsList[measurementType] && this.setButtonActive(this.buttonsList[measurementType]);
     };            
 
     proto.setupPrecision = function() {

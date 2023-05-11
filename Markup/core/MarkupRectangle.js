@@ -1,11 +1,11 @@
 'use strict';
 
-import { Markup } from './Markup'
-import * as MarkupTypes from './MarkupTypes'
+import { Markup } from './Markup';
+import * as MarkupTypes from './MarkupTypes';
 import { createMarkupPathSvg, composeRGBAString, createRectanglePath,
-    setAttributeToMarkupSvg, updateMarkupPathSvgHitarea, addMarkupMetadata } from './MarkupsCoreUtils'
-import { cloneStyle } from './StyleUtils'
-import { EditModeRectangle } from './edit-modes/EditModeRectangle'
+    setAttributeToMarkupSvg, updateMarkupPathSvgHitarea, addMarkupMetadata } from './MarkupsCoreUtils';
+import { cloneStyle } from './StyleUtils';
+import { EditModeRectangle } from './edit-modes/EditModeRectangle';
 
     /**
      * Rectangle markup.

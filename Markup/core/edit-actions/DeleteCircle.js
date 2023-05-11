@@ -1,7 +1,7 @@
 'use strict';
 
-import { EditAction } from './EditAction'
-import { CreateCircle } from './CreateCircle'
+import { EditAction } from './EditAction';
+import { CreateCircle } from './CreateCircle';
 
     /**
      * Markup delete circle action.

@@ -1,15 +1,15 @@
 'use strict';
 
-import { EditMode } from './EditMode'
-import { DeleteText } from '../edit-actions/DeleteText'
-import { DeleteCallout } from '../edit-actions/DeleteCallout'
-import { CreateText } from '../edit-actions/CreateText'
-import { SetText } from '../edit-actions/SetText'
-import { SetSize } from '../edit-actions/SetSize'
-import { SetStyle } from '../edit-actions/SetStyle'
-import * as MarkupTypes from '../MarkupTypes'
-import * as MarkupEvents from '../MarkupEvents'
-import { EditorTextInput } from './EditorTextInput'
+import { EditMode } from './EditMode';
+import { DeleteText } from '../edit-actions/DeleteText';
+import { DeleteCallout } from '../edit-actions/DeleteCallout';
+import { CreateText } from '../edit-actions/CreateText';
+import { SetText } from '../edit-actions/SetText';
+import { SetSize } from '../edit-actions/SetSize';
+import { SetStyle } from '../edit-actions/SetStyle';
+import * as MarkupTypes from '../MarkupTypes';
+import * as MarkupEvents from '../MarkupEvents';
+import { EditorTextInput } from './EditorTextInput';
 
 
     /**

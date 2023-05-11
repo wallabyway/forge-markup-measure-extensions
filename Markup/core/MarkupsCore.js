@@ -1,24 +1,24 @@
 'use strict';
 
-import { EditActionManager } from './edit-actions/EditActionManager'
-import * as MarkupEvents from './MarkupEvents'
-import * as MarkupTypes from './MarkupTypes'
+import { EditActionManager } from './edit-actions/EditActionManager';
+import * as MarkupEvents from './MarkupEvents';
+import * as MarkupTypes from './MarkupTypes';
 import { addTraitEventDispatcher, createSvgElement, setSvgParentAttributes,
     MARKUP_DEFAULT_STROKE_WIDTH_IN_PIXELS, MARKUP_DEFAULT_FONT_WIDTH_IN_PIXELS,
     hideLmvUi, restoreLmvUi, dismissLmvHudMessage, 
     removeAllMetadata, transferChildNodes, addSvgMetadata,
     svgNodeToString, checkPolygon, stringToSvgNode, createMarkupFromSVG,
-    worldToClient, clientToWorld } from './MarkupsCoreUtils'
-import { cloneStyle, copyStyle, createStyle } from './StyleUtils'
-import { DomElementStyle } from './DomElementStyle'
-import { Clipboard } from './edit-clipboard/Clipboard'
-import { InputHandler } from './edit-input/InputHandler'
-import { EditFrame } from './EditFrame'
-import { MarkupTool } from './MarkupTool'
-import { EditModeArrow } from './edit-modes/EditModeArrow'
+    worldToClient, clientToWorld } from './MarkupsCoreUtils';
+import { cloneStyle, copyStyle, createStyle } from './StyleUtils';
+import { DomElementStyle } from './DomElementStyle';
+import { Clipboard } from './edit-clipboard/Clipboard';
+import { InputHandler } from './edit-input/InputHandler';
+import { EditFrame } from './EditFrame';
+import { MarkupTool } from './MarkupTool';
+import { EditModeArrow } from './edit-modes/EditModeArrow';
 
-import * as Blah from './edit-modes/BuiltinEditModes' // IMPORTANT!!
-import CSS from './Markups.css' // IMPORTANT!!
+import './edit-modes/BuiltinEditModes'; // IMPORTANT!! HAS SIDE EFFECTS
+import './Markups.css'; // IMPORTANT!!
 
 
     var MeasureCommon = Autodesk.Viewing.MeasureCommon;
@@ -36,7 +36,7 @@ import CSS from './Markups.css' // IMPORTANT!!
      * @param {Autodesk.Viewing.ToolInterface} [options.markupToolClass] - Class override for input handling.
      * Use it to override/extend default hotkeys and/or mouse/gesture input.
      * @memberof Autodesk.Viewing.Extensions.Markups.Core
-     * @constructor
+     * @class
      */
     export function MarkupsCore(viewer, options) {
 
@@ -73,10 +73,25 @@ import CSS from './Markups.css' // IMPORTANT!!
         // Extension will dispatch events.
         addTraitEventDispatcher(this);
 
-        viewer.addEventListener(Autodesk.Viewing.CAMERA_CHANGE_EVENT, function() {
-            this.getStrokeWidth();
-            this.getFontWidth();
-        }.bind(this), { once: true });
+        const initStrokeAndFontWidths = (model) => {
+            // For 2d, set these widths once, and not recalculate again
+            if (model.is2d()) {
+                this.getStrokeWidth();
+                this.getFontWidth();
+            }
+        };
+
+        if (viewer.model) {
+            initStrokeAndFontWidths(viewer.model);
+        } else {
+            // Camera is reset right after a model load
+            // This is the right camera to use for widths initialization
+            viewer.addEventListener(Autodesk.Viewing.MODEL_ADDED_EVENT, ({ model }) => {
+                viewer.addEventListener(Autodesk.Viewing.CAMERA_CHANGE_EVENT, () => {
+                    initStrokeAndFontWidths(model);
+                }, { once: true });
+            }, { once: true });
+        }
 
         // Handled events.
         this.onCameraChangeBinded = this.onCameraChange.bind(this);
@@ -148,6 +163,7 @@ import CSS from './Markups.css' // IMPORTANT!!
 
     /**
      * Change the markup tool's class in order to implement a different behaviour to the UI.
+     *
      * @param {Autodesk.Viewing.Extensions.Markups.Core.MarkupTool} toolClass - Implementation or extension of MarkupTool's class.
      * @param {boolean} enableHotKeys - Whether to enable markup's hot-keys or not.
      */
@@ -236,11 +252,17 @@ import CSS from './Markups.css' // IMPORTANT!!
      *
      * See also
      * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#show|show()}
+     *
      * @param {string} layerId - [optional] Identifier for the layer of markups to be edited. Example "Layer1".
      * @returns {boolean} Returns true if editMode is active
      */
     MarkupsCore.prototype.enterEditMode = function(layerId) {
 
+        /**
+         * @param layer
+         * @param disable
+         * @private
+         */
         function disableLayerMarkups(layer, disable){
             if (layer){
                 var layerMarkups = layer.markups;
@@ -417,6 +439,7 @@ import CSS from './Markups.css' // IMPORTANT!!
      *
      * See also
      * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode|enterEditMode()}.
+     *
      * @returns {boolean} Whether it successfully entered view mode or not.
      */
     MarkupsCore.prototype.show = function() {
@@ -463,6 +486,7 @@ import CSS from './Markups.css' // IMPORTANT!!
      *
      * See also
      * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#show|show()}
+     *
      * @returns {boolean} Whether it successfully left view mode or not.
      */
     MarkupsCore.prototype.hide = function() {
@@ -537,6 +561,7 @@ import CSS from './Markups.css' // IMPORTANT!!
      *
      * Markups should have been added while in
      * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode|Edit mode}.
+     *
      * @returns {string} Returns an SVG element with all of the created markups in a string format.
      */
     MarkupsCore.prototype.generateData = function() {
@@ -606,7 +631,7 @@ import CSS from './Markups.css' // IMPORTANT!!
 
         // Gather a 3d point for markup.
         var idTarget = this.viewer.impl.renderer().readbackTargetId();
-        for(var i = 0; i < markupsCount; ++i) {
+        for(let i = 0; i < markupsCount; ++i) {
 
             var markup = markups[i];
             var point = markup.generatePoint3d(idTarget) || null;
@@ -627,7 +652,7 @@ import CSS from './Markups.css' // IMPORTANT!!
             return result;
         }
 
-        for(var i = 0; i < markupsCount; ++i) {
+        for(let i = 0; i < markupsCount; ++i) {
 
             var collision = result.markups[i];
             if (collision.type === MarkupTypes.MARKUP_TYPE_ARROW && collision.point !== null) {
@@ -643,7 +668,7 @@ import CSS from './Markups.css' // IMPORTANT!!
         var bbX1 = Number.NEGATIVE_INFINITY;
         var bbY1 = Number.NEGATIVE_INFINITY;
 
-        for(var i = 0; i < markupsCount; ++i) {
+        for(let i = 0; i < markupsCount; ++i) {
 
             var boundingBox = markups[i].generateBoundingBox();
 
@@ -668,7 +693,11 @@ import CSS from './Markups.css' // IMPORTANT!!
 
     /**
      * Renders the markups onto a 2D canvas context to generate an image.
+     *
      * @param {CanvasRenderingContext2D} context - Markups are drawn using the context provided
+     * @param callback
+     * @param renderAllMarkups
+     * @private
      */
     MarkupsCore.prototype.renderToCanvas = function(context, callback, renderAllMarkups) {
 
@@ -727,7 +756,8 @@ import CSS from './Markups.css' // IMPORTANT!!
      * - `new Autodesk.Viewing.Extensions.Markups.Core.EditModePolycloud(MarkupsCoreInstance)`
      *
      * This function fires event `Autodesk.Viewing.Extensions.Markups.Core.EVENT_EDITMODE_CHANGED`.
-     * @param {Object} editMode - Object instance for the drawing tool
+     *
+     * @param {object} editMode - Object instance for the drawing tool
      */
     MarkupsCore.prototype.changeEditMode = function(editMode) {
 
@@ -749,7 +779,7 @@ import CSS from './Markups.css' // IMPORTANT!!
      * While the extension is active, the user can still draw markups.
      * Panning and zooming are only supported for orthographic cameras.
      *
-     * @return {boolean} Whether {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#allowNavigation|allowNavigation()} can succeed.
+     * @returns {boolean} Whether {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#allowNavigation|allowNavigation()} can succeed.
      */
     MarkupsCore.prototype.isNavigationAllowed = function() {
 
@@ -802,6 +832,7 @@ import CSS from './Markups.css' // IMPORTANT!!
     /**
      * Sets mouse interactions and mobile device gestures with markups. Only applicable in
      * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode|Edit mode}.
+     *
      * @param {boolean} disable - true to disable interactions with markups; false to enable interactions with markups; default false.
      */
     MarkupsCore.prototype.disableMarkupInteractions = function(disable) {
@@ -863,7 +894,7 @@ import CSS from './Markups.css' // IMPORTANT!!
         this.viewer.setNavigationLock(event.active);
     };
 
-    MarkupsCore.prototype.onUnitsCalibrationStarts = function(event) {
+    MarkupsCore.prototype.onUnitsCalibrationStarts = function() {
         if (this.duringEditMode) {
             this.hide();
         }
@@ -949,7 +980,8 @@ import CSS from './Markups.css' // IMPORTANT!!
     /**
      * Returns true when {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#undo|undo()}
      * produces no changes.
-     * @return {boolean} true if there are no changes to undo; false if there are changes to undo.
+     *
+     * @returns {boolean} true if there are no changes to undo; false if there are changes to undo.
      */
     MarkupsCore.prototype.isUndoStackEmpty = function() {
 
@@ -959,7 +991,8 @@ import CSS from './Markups.css' // IMPORTANT!!
     /**
      * Returns true when {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#redo|redo()}
      * produces no changes.
-     * @return {boolean} true if there are no changes to redo; false if there are changes to redo.
+     *
+     * @returns {boolean} true if there are no changes to redo; false if there are changes to redo.
      */
     MarkupsCore.prototype.isRedoStackEmpty = function() {
 
@@ -983,6 +1016,7 @@ import CSS from './Markups.css' // IMPORTANT!!
 
     /**
      * Helper function for generating unique markup ids.
+     *
      * @returns {number}
      */
     proto.getId = function() {
@@ -1000,13 +1034,13 @@ import CSS from './Markups.css' // IMPORTANT!!
         if((data.action !== 'undo' && data.targetId !== -1)) {
 
             // Markup can be null when deleting, that's ok, we unselect in that case.
-            var markup = this.getMarkup(data.targetId);
+            let markup = this.getMarkup(data.targetId);
             this.selectMarkup(markup);
         }
         if(data.action === 'undo' && !this.isUndoStackEmpty()) {
 
-          var markup = this.getMarkup(this.actionManager.getLastElementInUndoStack().getTargetId());
-          this.selectMarkup(markup);
+            let markup = this.getMarkup(this.actionManager.getLastElementInUndoStack().getTargetId());
+            this.selectMarkup(markup);
         }
 
         this.dispatchEvent(event);
@@ -1017,6 +1051,7 @@ import CSS from './Markups.css' // IMPORTANT!!
      * The ID can be retrieved from the return value of getSelection(). <br>
      * See also
      * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#getSelection|getSelection()}.
+     *
      * @param {string} id Markup identifier.
      * @returns {Autodesk.Viewing.Extensions.Markups.Core.Markup} Returns markup object.
      */
@@ -1040,6 +1075,7 @@ import CSS from './Markups.css' // IMPORTANT!!
      * such as resizing, rotations, and translations. To deselect a markup, send a null value. <br>
      * See also
      * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#getMarkup|getMarkup()}.
+     *
      * @param {Autodesk.Viewing.Extensions.Markups.Core.Markup|null} markup The markup instance to select. Set the value to null to deselect a markup.
      */
     MarkupsCore.prototype.selectMarkup = function(markup) {
@@ -1070,6 +1106,7 @@ import CSS from './Markups.css' // IMPORTANT!!
      * resizing, rotations and translations.<br>
      * See also
      * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#selectMarkup|selectMarkup()}.
+     *
      * @returns {Autodesk.Viewing.Extensions.Markups.Core.Markup|null} Returns selected markup object; null if no markup is selected.
      */
     MarkupsCore.prototype.getSelection = function() {
@@ -1080,6 +1117,7 @@ import CSS from './Markups.css' // IMPORTANT!!
     /**
      * Deletes a markup from the canvas. Only applies while in
      * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#enterEditMode|Edit mode}.
+     *
      * @param {Autodesk.Viewing.Extensions.Markups.Core.Markup} markup - Markup object.
      * @param {boolean} [dontAddToHistory] Whether delete action can be {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#undo|undone}.
      */
@@ -1136,6 +1174,7 @@ import CSS from './Markups.css' // IMPORTANT!!
         /**
          * Get the layer markups in which the markup exists.
          * This function will remove the markup if it exists in the corresponding layer markups array.
+         *
          * @param markup
          * @returns {number} returns -1 if the markup does not exist in a layer markups array
          */
@@ -1225,6 +1264,7 @@ import CSS from './Markups.css' // IMPORTANT!!
             'stroke-color',
             'stroke-opacity',
             'fill-color',
+            'text-data',
             'fill-opacity'];
         this.defaultStyle = this.defaultStyle || createStyle(defaultStyleAttributes, this);
 
@@ -1236,6 +1276,7 @@ import CSS from './Markups.css' // IMPORTANT!!
     /**
      *
      * @param markup
+     * @private
      */
     proto.bringToFront = function(markup) {
 
@@ -1245,6 +1286,7 @@ import CSS from './Markups.css' // IMPORTANT!!
     /**
      *
      * @param markup
+     * @private
      */
     proto.sendToBack = function(markup) {
 
@@ -1254,6 +1296,7 @@ import CSS from './Markups.css' // IMPORTANT!!
     /**
      *
      * @param markup
+     * @private
      */
     proto.bringForward = function(markup) {
 
@@ -1264,6 +1307,7 @@ import CSS from './Markups.css' // IMPORTANT!!
     /**
      *
      * @param markup
+     * @private
      */
     proto.bringBackward = function(markup) {
 
@@ -1310,16 +1354,9 @@ import CSS from './Markups.css' // IMPORTANT!!
      *
      * @param {string} markupString - SVG string with markups. See also {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#generateData|generateData()}.
      * @param {string} layerId - Identifier for the layer where the markup should be loaded to. Example "Layer1".
-     * @return {boolean} Whether the markup string was able to be loaded successfully
+     * @returns {boolean} Whether the markup string was able to be loaded successfully
      */
     MarkupsCore.prototype.loadMarkups = function (markupString, layerId) {
-
-        function getDataModelVersion(node) {
-            var metadata = node.childNodes[0] ? node.childNodes[0].childNodes[0] : null;
-            var versionAttr = metadata && (typeof metadata.getAttribute === 'function') && metadata.getAttribute('data-model-version');
-
-            return (typeof versionAttr === 'string') ? parseFloat(versionAttr) : null;
-        }
 
         if (this.duringEditMode) {
             console.warn("Markups will not be loaded during the edit mode");
@@ -1340,8 +1377,6 @@ import CSS from './Markups.css' // IMPORTANT!!
         if (!parent) {
             return false;
         }
-
-        // var version = getDataModelVersion(parent);
 
         // If the supplied layerId exists in the svg layers map and there are children in the svg then return false.
         if (layerId in this.svgLayersMap && this.svg.childNodes.length > 0) {
@@ -1478,7 +1513,7 @@ import CSS from './Markups.css' // IMPORTANT!!
      * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#hideMarkups|hideMarkups()}.
      *
      * @param {string} layerId - ID of the layer containing all markups to unload (from the DOM).
-     * @return {boolean} Whether the operation succeeded or not.
+     * @returns {boolean} Whether the operation succeeded or not.
      */
     MarkupsCore.prototype.unloadMarkups = function(layerId) {
 
@@ -1567,7 +1602,7 @@ import CSS from './Markups.css' // IMPORTANT!!
      * {@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#loadMarkups|loadMarkups()}.
      *
      * @param {string} layerId - ID of the layer containing all markups that should be hidden (in the DOM).
-     * @return {boolean} Whether the operation succeeded or not.
+     * @returns {boolean} Whether the operation succeeded or not.
      */
     MarkupsCore.prototype.hideMarkups = function(layerId) {
 
@@ -1598,7 +1633,7 @@ import CSS from './Markups.css' // IMPORTANT!!
      * ({@link Autodesk.Viewing.Extensions.Markups.Core.MarkupsCore/#hideMarkups|hideMarkups()}).
      *
      * @param {string} layerId - ID of the layer containing all markups to unload (from the DOM).
-     * @return {boolean} Whether the operation succeeded or not.
+     * @returns {boolean} Whether the operation succeeded or not.
      */
     MarkupsCore.prototype.showMarkups = function(layerId) {
 
@@ -1772,7 +1807,7 @@ import CSS from './Markups.css' // IMPORTANT!!
 
     //// Handled Events ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    proto.onCameraChange = function(event) {
+    proto.onCameraChange = function() {
 
         // Update annotations' parent transform.
         var viewBox = this.getSvgViewBox(this.bounds.width, this.bounds.height);
@@ -1856,25 +1891,33 @@ import CSS from './Markups.css' // IMPORTANT!!
 
     /**
      * Handler to mouse move events, used to create markups.
+     *
+     * @param event
+     * @returns {boolean} - if the event was handed by the editor
      * @private
      */
     proto.onMouseMove = function(event) {
 
         if (this.navigating) {
-            return;
+            return false;
         }
 
+        let eventHandled = false;
         if (this.editFrame.isActive() && event.type === 'mousemove') {
-            this.editFrame.onMouseMove(event);
+            eventHandled = this.editFrame.onMouseMove(event);
         }
 
         this.callSnapperMouseMove();
 
-        this.editMode && this.editMode.onMouseMove(event);
+        eventHandled = (this.editMode && this.editMode.onMouseMove(event)) || eventHandled;
+
+        return eventHandled;
     };
 
     /**
      * Handler to mouse down events, used to start creation markups.
+     *
+     * @param event
      * @private
      */
     proto.onMouseDown = function(event) {
@@ -1898,19 +1941,25 @@ import CSS from './Markups.css' // IMPORTANT!!
         this.ignoreNextMouseUp = false;
     };
 
+    /**
+     * 
+     * @param {*} event 
+     * @returns {boolean} - true / false means the editor did / didn't handle the event
+     * @private
+     */
     proto.onMouseUp = function(event) {
 
         if (this.navigating) {
-            return;
+            return false;
         }
 
         if (this.editFrame.isActive()) {
             this.editFrame.onMouseUp(event);
-            return;
+            return true;
         }
 
         if(!this.ignoreNextMouseUp) {
-            this.editMode.onMouseUp(event);
+            return this.editMode.onMouseUp(event);
         }
     };
 
@@ -1941,6 +1990,7 @@ import CSS from './Markups.css' // IMPORTANT!!
     /**
      *
      * @param event
+     * @private
      */
     proto.onMarkupSelected = function(event) {
 
@@ -1948,11 +1998,11 @@ import CSS from './Markups.css' // IMPORTANT!!
         this.dispatchEvent(event);
     };
 
-    proto.onMarkupEnterEdition = function(event) {
+    proto.onMarkupEnterEdition = function() {
 
     };
 
-    proto.onMarkupCancelEdition = function(event) {
+    proto.onMarkupCancelEdition = function() {
 
         this.onUserCancel();
     };
